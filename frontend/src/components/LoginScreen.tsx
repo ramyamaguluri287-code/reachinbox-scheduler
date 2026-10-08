@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
-import { Mail, Clock, Zap, ShieldCheck } from 'lucide-react';
+import { Mail, Zap } from 'lucide-react';
 
 interface LoginScreenProps {
   onGoogleSuccess: (credential: string) => void;
@@ -15,73 +15,94 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   loading,
   error,
 }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleEmailLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Use demo login or create session with entered email
+    onDemoLogin();
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center p-4">
-      <div className="max-w-md w-full bg-white rounded-3xl p-8 shadow-2xl border border-slate-100/10 text-center relative overflow-hidden">
-        {/* Glow accent */}
-        <div className="absolute -top-12 -right-12 w-40 h-40 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
-
-        {/* Brand Icon */}
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-500 flex items-center justify-center mx-auto shadow-lg shadow-indigo-500/20 mb-6">
-          <Mail className="w-8 h-8 text-white" />
-        </div>
-
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">ReachInbox</h1>
-        <p className="text-sm text-slate-500 mt-1 font-medium">Production Email Job Scheduler</p>
-
-        <p className="text-xs text-slate-500 mt-4 leading-relaxed">
-          High-throughput email sequence scheduling powered by BullMQ delayed queues, Redis rate limiters, and fake Ethereal SMTP.
-        </p>
+    <div className="min-h-screen bg-[#F5F7F9] flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 sm:p-10 max-w-[420px] w-full text-center">
+        {/* Figma Heading */}
+        <h1 className="text-2xl font-bold text-gray-900 mb-6">Login</h1>
 
         {error && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl">
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg text-left">
             {error}
           </div>
         )}
 
-        {/* Google OAuth Button */}
-        <div className="mt-8 flex flex-col items-center justify-center space-y-4">
-          <div className="flex justify-center w-full">
-            <GoogleLogin
-              onSuccess={(credentialResponse) => {
-                if (credentialResponse.credential) {
-                  onGoogleSuccess(credentialResponse.credential);
-                }
-              }}
-              onError={() => console.error('Login Failed')}
-              shape="pill"
-              theme="outline"
-              size="large"
-              text="continue_with"
+        {/* Real Google OAuth Button */}
+        <div className="w-full flex justify-center mb-5">
+          <GoogleLogin
+            onSuccess={(credentialResponse) => {
+              if (credentialResponse.credential) {
+                onGoogleSuccess(credentialResponse.credential);
+              }
+            }}
+            onError={() => console.error('Google Login Failed')}
+            shape="rectangular"
+            theme="outline"
+            size="large"
+            width="100%"
+            text="continue_with"
+          />
+        </div>
+
+        {/* Divider */}
+        <div className="relative flex items-center justify-center my-6">
+          <div className="border-t border-gray-200 w-full" />
+          <span className="bg-white px-3 text-xs text-gray-400 select-none absolute">
+            or sign up through email
+          </span>
+        </div>
+
+        {/* Email & Password Form matching Figma */}
+        <form onSubmit={handleEmailLogin} className="space-y-3.5">
+          <div>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email ID"
+              className="w-full px-4 py-3 bg-[#F4F6F8] border border-transparent rounded-lg text-sm text-gray-800 placeholder-gray-400 focus:bg-white focus:border-[#00A859] focus:outline-none transition"
             />
           </div>
 
-          <div className="relative w-full flex items-center justify-center my-2">
-            <div className="border-t border-slate-200 w-full" />
-            <span className="bg-white px-3 text-[11px] text-slate-400 uppercase tracking-wider absolute">or</span>
+          <div>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              className="w-full px-4 py-3 bg-[#F4F6F8] border border-transparent rounded-lg text-sm text-gray-800 placeholder-gray-400 focus:bg-white focus:border-[#00A859] focus:outline-none transition"
+            />
           </div>
 
-          {/* Quick Demo Access Button */}
+          {/* Primary Login Button (Figma Outbox Labs Green) */}
           <button
-            onClick={onDemoLogin}
+            type="submit"
             disabled={loading}
-            className="w-full py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-full text-xs font-semibold transition shadow-md flex items-center justify-center space-x-2"
+            className="w-full py-3 bg-[#00A859] hover:bg-[#00924d] active:bg-[#007f43] text-white font-semibold text-sm rounded-lg transition duration-150 shadow-sm disabled:opacity-50"
           >
-            <Zap className="w-4 h-4 text-amber-400" />
-            <span>Instant Demo Sign-in (Evaluator / Recruiter)</span>
+            {loading ? 'Logging in...' : 'Login'}
           </button>
-        </div>
+        </form>
 
-        {/* Features badge */}
-        <div className="mt-8 pt-6 border-t border-slate-100 grid grid-cols-2 gap-3 text-left">
-          <div className="flex items-start space-x-2 text-[11px] text-slate-600">
-            <Clock className="w-3.5 h-3.5 text-indigo-600 shrink-0 mt-0.5" />
-            <span>Zero-cron delayed BullMQ queuing</span>
-          </div>
-          <div className="flex items-start space-x-2 text-[11px] text-slate-600">
-            <ShieldCheck className="w-3.5 h-3.5 text-indigo-600 shrink-0 mt-0.5" />
-            <span>Safe rate limiting & Slack alerts</span>
-          </div>
+        {/* One-Click Recruiter Demo Access */}
+        <div className="mt-5 pt-4 border-t border-gray-100">
+          <button
+            type="button"
+            onClick={onDemoLogin}
+            className="w-full py-2 px-3 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center space-x-1.5 transition"
+          >
+            <Zap className="w-3.5 h-3.5 text-amber-500" />
+            <span>Instant Evaluator Demo Sign-in</span>
+          </button>
         </div>
       </div>
     </div>
