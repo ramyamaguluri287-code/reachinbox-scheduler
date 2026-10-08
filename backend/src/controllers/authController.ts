@@ -42,15 +42,15 @@ export async function googleLogin(req: Request, res: Response) {
       // Fallback decode for development / demo evaluator sign-in
       const decoded: any = jwt.decode(credential);
       if (!decoded || !decoded.email) {
-        // Fallback demo user
-        googleId = 'demo-evaluator-101';
-        email = 'evaluator@reachinbox.test';
-        name = 'Demo Evaluator';
+        // Fallback demo user matching Figma
+        googleId = 'figma-oliver-brown';
+        email = 'oliver.brown@domain.io';
+        name = 'Oliver Brown';
         avatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100';
       } else {
         googleId = decoded.sub || `google-dev-${Date.now()}`;
         email = decoded.email;
-        name = decoded.name || 'Demo User';
+        name = decoded.name || 'Oliver Brown';
         avatar = decoded.picture || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100';
       }
     }
