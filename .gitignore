@@ -31,3 +31,7 @@ Thumbs.db
 *.ntvs*
 *.njsproj
 *.sln
+
+# Redis data
+*.rdb
+dump.rdb
