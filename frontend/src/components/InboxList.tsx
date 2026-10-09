@@ -1,6 +1,6 @@
 import React from 'react';
 import { EmailJob } from '../types';
-import { Search, SlidersHorizontal, RefreshCw, Star, Clock, Send, Inbox, ExternalLink } from 'lucide-react';
+import { Search, SlidersHorizontal, RefreshCw, Star, Clock, Send, ExternalLink } from 'lucide-react';
 
 interface InboxListProps {
   emails: EmailJob[];

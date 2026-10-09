@@ -4,7 +4,6 @@ import {
   Paperclip,
   Clock,
   Upload,
-  X,
   Undo2,
   Redo2,
   Type,

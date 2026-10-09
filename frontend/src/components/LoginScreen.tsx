@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
-import { Mail, Zap } from 'lucide-react';
+import { Zap } from 'lucide-react';
 
 interface LoginScreenProps {
   onGoogleSuccess: (credential: string) => void;

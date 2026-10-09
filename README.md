@@ -143,43 +143,43 @@ You can plug in free cloud instances into `backend/.env`:
 
 ---
 
-## 🚀 Step-by-Step Running Guide
+## 🚀 Monorepo Quickstart (Single Repository)
 
-### Step 1: Backend Setup
-Open PowerShell and navigate to the backend directory:
+Everything is unified into a single repository. You can run both the backend and frontend together with a single command:
+
 ```powershell
-cd backend
+# 1. Install root, backend, and frontend dependencies
 npm install
-```
+npm run install:all
 
-Initialize the database schema:
-```powershell
-npx prisma generate
-npx prisma db push
-```
+# 2. Sync database schema & seed Figma sample data
+npm run prisma:push
+npm run seed
 
-Start the backend in development mode:
-```powershell
+# 3. Start Backend & Frontend concurrently with one command!
 npm run dev
 ```
 
-You should see:
-```text
-=================================================
-🚀 ReachInbox Scheduler Backend running on port 5000
-📊 Bull-Board Dashboard: http://localhost:5000/admin/queues
-🔍 Health Check: http://localhost:5000/health
-=================================================
-✅ Redis connected successfully
-✅ PostgreSQL connected via Prisma
-✅ Elasticsearch index 'reachinbox_emails' is ready
-👷 BullMQ worker started with concurrency = 5
-```
+This concurrently boots:
+- 🚀 **Backend API & Queue Worker**: `http://localhost:5000`
+- 📊 **Bull-Board Live Monitor**: `http://localhost:5000/admin/queues`
+- 🖥️ **Frontend Dashboard**: `http://localhost:5173`
 
 ---
 
-### Step 2: Frontend Setup
-Open a second PowerShell terminal and navigate to the frontend directory:
+### Alternative: Individual Service Control
+
+If you prefer running services in separate terminals:
+
+#### Terminal 1 (Backend API & Worker):
+```powershell
+cd backend
+npm install
+npx prisma db push
+npm run dev
+```
+
+#### Terminal 2 (Frontend UI):
 ```powershell
 cd frontend
 npm install
