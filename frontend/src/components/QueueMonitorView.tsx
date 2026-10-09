@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
-import { Activity, RefreshCw, ExternalLink } from 'lucide-react';
+import { Activity, RefreshCw, ExternalLink, X, ArrowLeft } from 'lucide-react';
 
-export const QueueMonitorView: React.FC = () => {
+interface QueueMonitorViewProps {
+  onClose: () => void;
+}
+
+export const QueueMonitorView: React.FC<QueueMonitorViewProps> = ({ onClose }) => {
   const [iframeKey, setIframeKey] = useState(0);
 
   const handleRefresh = () => {
@@ -10,12 +14,22 @@ export const QueueMonitorView: React.FC = () => {
 
   return (
     <div className="flex-1 flex flex-col h-screen overflow-hidden bg-white">
-      {/* Top Header */}
-      <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between shrink-0">
+      {/* Top Header with Back / Close Button */}
+      <div className="px-6 py-3.5 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 rounded-lg bg-[#EAF8F1] text-[#00A859] flex items-center justify-center">
+          {/* Quick Back Arrow */}
+          <button
+            onClick={onClose}
+            className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-gray-900 transition"
+            title="Back to Inbox"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </button>
+
+          <div className="w-8 h-8 rounded-lg bg-[#EAF8F1] text-[#00A859] flex items-center justify-center shrink-0">
             <Activity className="w-4 h-4" />
           </div>
+
           <div>
             <h2 className="text-xs font-bold text-gray-900 flex items-center space-x-2">
               <span>BullMQ Real-Time Queue Dashboard</span>
@@ -30,24 +44,36 @@ export const QueueMonitorView: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center space-x-2">
+        {/* Action Controls + Instant Close Button */}
+        <div className="flex items-center space-x-2.5">
           <button
             onClick={handleRefresh}
             className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition text-xs flex items-center space-x-1"
-            title="Refresh queue view"
+            title="Reload queue view"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span className="text-[11px] font-medium hidden sm:inline">Refresh</span>
           </button>
+
           <a
             href="http://localhost:5000/admin/queues"
             target="_blank"
             rel="noreferrer"
             className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition text-xs flex items-center space-x-1"
-            title="Open in new window"
+            title="Open in external browser tab"
           >
             <ExternalLink className="w-3.5 h-3.5" />
           </a>
+
+          {/* Primary Instant Close Button */}
+          <button
+            onClick={onClose}
+            className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 hover:text-gray-900 transition shadow-sm ml-2"
+            title="Close Queue Dashboard and return to Inbox"
+          >
+            <X className="w-3.5 h-3.5" />
+            <span>Close Dashboard</span>
+          </button>
         </div>
       </div>
 

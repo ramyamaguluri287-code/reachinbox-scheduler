@@ -234,7 +234,7 @@ export function App() {
           onBack={() => setCurrentView('inbox')}
         />
       ) : activeTab === 'queues' ? (
-        <QueueMonitorView />
+        <QueueMonitorView onClose={() => setActiveTab('scheduled')} />
       ) : (
         <InboxList
           emails={activeTab === 'scheduled' ? scheduledEmails : sentEmails}
