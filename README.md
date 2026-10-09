@@ -131,12 +131,24 @@ flowchart TD
 - Protected by Redis alert de-duplication so Slack is notified once per hourly window rather than flooded.
 - **Graceful degradation**: If Slack is not connected, the scheduler operates silently without crashing.
 
-### 5. Elasticsearch Indexing & Full-Text Search
+### 5. Behavior Under Load (1000+ Emails Simulation)
+When a large campaign of **1,000+ emails** is scheduled for roughly the same time:
+1. **Staggered Ingestion**: The API stores the batch into PostgreSQL and computes individual dispatch timestamps staggered by `DELAY_BETWEEN_EMAILS_MS` (e.g. 250ms).
+2. **Redis Memory Efficiency**: BullMQ enqueues all 1,000 jobs into the Redis Sorted Set (`zset`) in milliseconds ($O(\log N)$ insertion), requiring less than 2 MB of Redis memory.
+3. **Parallel Concurrency**: 10 worker threads consume jobs in parallel without lock contention.
+4. **Rate Limit Throttling**:
+   - The first 200 emails (per sender quota) are delivered normally.
+   - On the 201st email, the Redis atomic counter (`INCR rl:sender:<sender>:<window>`) exceeds `MAX_EMAILS_PER_HOUR`.
+   - **Zero Jobs Lost**: Jobs 201 through 1,000 are **NOT failed or dropped**; they are automatically rescheduled into the next hour window (`nextHourStart = currentHour + 1 hr`) with status `RESCHEDULED`.
+   - **Live Slack Alert**: A Slack notification is dispatched once on the first quota hit in that window.
+5. **Order Preservation**: The relative delay and sequence between recipients are preserved across subsequent hour buckets.
+
+### 6. Elasticsearch Indexing & Full-Text Search
 - Emails are indexed into Elasticsearch (`reachinbox_emails`) at creation and upon delivery.
 - Full-text search across recipients, subjects, senders, and body content.
 - Graceful database fallback if Elasticsearch is offline.
 
-### 6. Live BullMQ Visibility
+### 7. Live BullMQ Visibility
 - Live Bull-Board dashboard integrated at `http://localhost:5000/admin/queues` allowing visual inspection of active, delayed, completed, and failed jobs.
 
 ---
