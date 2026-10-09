@@ -11,15 +11,32 @@ export async function scheduleEmails(req: Request, res: Response) {
 
     const {
       senderEmail,
+      fromEmail,
       recipientEmails,
+      to,
       subject,
       body,
       startTime,
-      delayBetweenEmailsMs = ENV.SCHEDULER.DELAY_BETWEEN_EMAILS_MS,
+      delayBetweenEmailsMs,
+      delayBetweenMs,
       hourlyLimit = ENV.SCHEDULER.MAX_EMAILS_PER_HOUR,
     } = req.body;
 
-    if (!senderEmail || !Array.isArray(recipientEmails) || recipientEmails.length === 0 || !subject || !body) {
+    const actualSender = senderEmail || fromEmail || req.user?.email || 'user@domain.io';
+    const actualRecipients = Array.isArray(recipientEmails) 
+      ? recipientEmails 
+      : Array.isArray(to) 
+      ? to 
+      : typeof to === 'string' 
+      ? [to] 
+      : [];
+    const actualDelay = delayBetweenEmailsMs !== undefined 
+      ? delayBetweenEmailsMs 
+      : delayBetweenMs !== undefined 
+      ? delayBetweenMs 
+      : ENV.SCHEDULER.DELAY_BETWEEN_EMAILS_MS;
+
+    if (!actualSender || actualRecipients.length === 0 || !subject || !body) {
       return res.status(400).json({ error: 'Missing required fields or empty recipient list' });
     }
 
@@ -30,12 +47,12 @@ export async function scheduleEmails(req: Request, res: Response) {
     const createdJobs = [];
 
     // Loop through recipients and schedule with staggered delays
-    for (let i = 0; i < recipientEmails.length; i++) {
-      const recipient = recipientEmails[i].trim();
+    for (let i = 0; i < actualRecipients.length; i++) {
+      const recipient = actualRecipients[i].trim();
       if (!recipient) continue;
 
-      // Stagger each recipient by delayBetweenEmailsMs
-      const scheduledTimeMs = effectiveStartTime + i * Number(delayBetweenEmailsMs);
+      // Stagger each recipient by actualDelay
+      const scheduledTimeMs = effectiveStartTime + i * Number(actualDelay);
       const scheduledDate = new Date(scheduledTimeMs);
       const delayMs = Math.max(0, scheduledTimeMs - Date.now());
 
@@ -43,7 +60,7 @@ export async function scheduleEmails(req: Request, res: Response) {
       const emailRecord = await prisma.emailJob.create({
         data: {
           userId,
-          senderEmail,
+          senderEmail: actualSender,
           recipientEmail: recipient,
           subject,
           body,
@@ -57,13 +74,13 @@ export async function scheduleEmails(req: Request, res: Response) {
         {
           emailId: emailRecord.id,
           userId,
-          senderEmail,
+          senderEmail: actualSender,
           recipientEmail: recipient,
           subject,
           body,
           scheduledAt: scheduledDate.toISOString(),
           hourlyLimit: Number(hourlyLimit),
-          delayBetweenEmailsMs: Number(delayBetweenEmailsMs),
+          delayBetweenEmailsMs: Number(actualDelay),
         },
         delayMs
       );
@@ -78,7 +95,7 @@ export async function scheduleEmails(req: Request, res: Response) {
       await indexEmailInElastic({
         id: emailRecord.id,
         userId,
-        senderEmail,
+        senderEmail: actualSender,
         recipientEmail: recipient,
         subject,
         body,
@@ -110,10 +127,19 @@ export async function getScheduledEmails(req: Request, res: Response) {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
+    const search = String(req.query.search || req.query.q || '').trim();
+
     const emails = await prisma.emailJob.findMany({
       where: {
         userId,
         status: { in: ['SCHEDULED', 'RESCHEDULED', 'PROCESSING'] },
+        ...(search ? {
+          OR: [
+            { recipientEmail: { contains: search, mode: 'insensitive' } },
+            { subject: { contains: search, mode: 'insensitive' } },
+            { body: { contains: search, mode: 'insensitive' } },
+          ],
+        } : {}),
       },
       orderBy: { scheduledAt: 'asc' },
     });
@@ -129,10 +155,19 @@ export async function getSentEmails(req: Request, res: Response) {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
+    const search = String(req.query.search || req.query.q || '').trim();
+
     const emails = await prisma.emailJob.findMany({
       where: {
         userId,
         status: { in: ['SENT', 'FAILED'] },
+        ...(search ? {
+          OR: [
+            { recipientEmail: { contains: search, mode: 'insensitive' } },
+            { subject: { contains: search, mode: 'insensitive' } },
+            { body: { contains: search, mode: 'insensitive' } },
+          ],
+        } : {}),
       },
       orderBy: { sentAt: 'desc' },
     });

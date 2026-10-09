@@ -52,6 +52,18 @@ app.listen(PORT, async () => {
 
   // Reconcile and verify pending jobs from DB to guarantee resilience across restarts
   await reconcilePendingJobs();
+
+  // Also bind to port 4000 if available for Outbox Labs assignment specification compatibility
+  if (PORT !== 4000) {
+    try {
+      const dualServer = app.listen(4000, () => {
+        console.log(`🌐 Compatibility server active on http://localhost:4000`);
+      });
+      dualServer.on('error', (err: any) => {
+        // Port 4000 in use or restricted, continue on primary port 5000
+      });
+    } catch (e) {}
+  }
 });
 
 export default app;
