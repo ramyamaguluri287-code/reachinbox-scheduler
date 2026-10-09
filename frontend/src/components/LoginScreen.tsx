@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
 import { Zap } from 'lucide-react';

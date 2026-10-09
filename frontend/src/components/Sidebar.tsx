@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { User } from '../types';
 import { Clock, Send, Activity, ChevronDown, LogOut, ExternalLink, Slack, CheckCircle2, X } from 'lucide-react';
@@ -151,9 +153,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Bottom Integrations & Controls */}
       <div className="p-4 border-t border-gray-100 space-y-2">
-        {/* Bull-Board Quick Access */}
+        {/* Bull-Board Quick Access on same URL */}
         <a
-          href="http://localhost:5000/admin/queues"
+          href="/admin/queues"
           target="_blank"
           rel="noreferrer"
           className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 transition"

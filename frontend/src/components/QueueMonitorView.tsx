@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { Activity, RefreshCw, X, ArrowLeft } from 'lucide-react';
 
@@ -94,7 +96,7 @@ export const QueueMonitorView: React.FC<QueueMonitorViewProps> = ({ onClose }) =
       <div className="flex-1 w-full h-full bg-[#f8fafc] relative">
         <iframe
           key={iframeKey}
-          src="http://localhost:5000/admin/queues"
+          src="/admin/queues"
           title="BullMQ Dashboard"
           className="w-full h-full border-0"
         />

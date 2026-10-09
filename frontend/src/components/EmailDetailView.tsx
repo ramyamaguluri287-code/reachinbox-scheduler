@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { ArrowLeft, Star, Archive, Trash2, ExternalLink, LogOut } from 'lucide-react';
 import { User, EmailJob } from '../types';
