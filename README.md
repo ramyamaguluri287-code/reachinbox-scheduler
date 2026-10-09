@@ -4,15 +4,47 @@ A resilient, scalable email scheduler and management dashboard engineered for hi
 
 ---
 
+## 🎯 Problem Statement & Tech Requirements
+
+### Problem Statement
+At ReachInbox, a huge part of our system is **reliable scheduling and sending of emails at scale**.
+This repository delivers a **production-grade email scheduler service + dashboard** that:
+- ✅ Accepts **email send requests** via APIs
+- ✅ Schedules them to be sent at a **specific time**
+- ✅ Uses **BullMQ + Redis** as a persistent job scheduler (**no cron jobs**)
+- ✅ Sends emails using fake SMTP via **Ethereal Email**
+- ✅ Survives **server restarts** without restarting from scratch or losing jobs
+- ✅ Exposes a **frontend dashboard** to:
+  - Schedule new emails (with "Send Later" calendar presets & "⚡ Send Fast")
+  - View scheduled emails (matching Figma pixel-for-pixel)
+  - View sent emails (with live Ethereal web preview links)
+
+### 🧪 Tech Requirements Compliance
+
+| Area | Requirement | Our Implementation | Verified |
+| :--- | :--- | :--- | :---: |
+| **Backend Language** | **TypeScript** | Strict TypeScript (`v5.4.5`) compiling cleanly to `dist/` | ✅ Yes |
+| **Backend Framework** | **Express.js** | Express (`v4.19.2`) with typed controllers, middlewares & routes | ✅ Yes |
+| **Queue** | **BullMQ** + **Redis** | BullMQ (`v5.7.14`) backed by Redis with persistent delayed sets | ✅ Yes |
+| **Database** | **PostgreSQL** or MySQL | PostgreSQL 16/17 with Prisma ORM (`v5.14.0`) & relational schema | ✅ Yes |
+| **SMTP** | **Ethereal Email** | Nodemailer with automatic Ethereal SMTP & live preview links | ✅ Yes |
+| **Frontend Framework** | **React.js** or Next.js | React 18.3.1 with Vite for rapid HMR | ✅ Yes |
+| **Frontend Styling** | **Tailwind CSS** | Tailwind CSS (`v3.4.3`) matching Figma screens pixel-for-pixel | ✅ Yes |
+| **Frontend Language** | **TypeScript** | Strict TypeScript throughout all `.tsx` components and hooks | ✅ Yes |
+| **Infrastructure** | **Docker** (recommended) | Docker Compose with PostgreSQL 16, Redis 7 (AOF), Elasticsearch | ✅ Yes |
+
+---
+
 ## 📑 Table of Contents
-1. [Architecture Overview](#-architecture-overview)
-2. [Key Engineering Highlights](#-key-engineering-highlights)
-3. [Prerequisites & Quick Setup on Windows](#-prerequisites--quick-setup-on-windows)
-4. [Step-by-Step Running Guide](#-step-by-step-running-guide)
-5. [Feature Mapping](#-feature-mapping)
-6. [Resilience & Restart Persistence Testing](#-resilience--restart-persistence-testing)
-7. [Rate Limiting & Slack Alerting Logic](#-rate-limiting--slack-alerting-logic)
-8. [5-Minute Demo Video Walkthrough Script](#-5-minute-demo-video-walkthrough-script)
+1. [Problem Statement & Tech Requirements](#-problem-statement--tech-requirements)
+2. [Architecture Overview](#-architecture-overview)
+3. [Key Engineering Highlights](#-key-engineering-highlights)
+4. [Prerequisites & Quick Setup on Windows](#-prerequisites--quick-setup-on-windows)
+5. [Step-by-Step Running Guide](#-step-by-step-running-guide)
+6. [Feature Mapping](#-feature-mapping)
+7. [Resilience & Restart Persistence Testing](#-resilience--restart-persistence-testing)
+8. [Rate Limiting & Slack Alerting Logic](#-rate-limiting--slack-alerting-logic)
+9. [5-Minute Demo Video Walkthrough Script](#-5-minute-demo-video-walkthrough-script)
 
 ---
 
@@ -193,16 +225,17 @@ Open your browser at `http://localhost:5173`.
 
 | Requirement | Implementation Component | File Reference |
 |---|---|---|
-| **Zero-Cron Scheduling** | BullMQ Delayed Queue (`emailQueue.add` with `delay`) | `backend/src/queues/emailQueue.ts` |
-| **Worker Concurrency** | BullMQ Worker with `concurrency: 5` | `backend/src/workers/emailWorker.ts` |
-| **Provider Throttling Delay** | Worker sleep delay (`DELAY_BETWEEN_EMAILS_MS`) | `backend/src/workers/emailWorker.ts` |
-| **Hourly Rate Limiting** | Redis atomic sliding window counters | `backend/src/services/rateLimiter.ts` |
-| **Slack Rate Limit Alert** | Real Slack OAuth token exchange + Web API alert | `backend/src/services/slackService.ts` |
-| **Elasticsearch Search** | Elastic Client indexing & multi-field query | `backend/src/services/elasticService.ts` |
-| **BullMQ Live Board** | `@bull-board/express` mounted at `/admin/queues` | `backend/src/queues/bullBoard.ts` |
-| **Google Login** | Real `@react-oauth/google` + Demo fallback | `frontend/src/components/LoginScreen.tsx` |
-| **Lead Parser** | File drag-and-drop CSV parser with count badge | `frontend/src/components/ComposeModal.tsx` |
-| **Scheduled & Sent Tables** | Real-time tables matching Figma design | `frontend/src/components/ScheduledTable.tsx` |
+| **Zero-Cron Scheduling** | BullMQ Delayed Queue (`emailQueue.add` with `delay`) | [`backend/src/queues/emailQueue.ts`](backend/src/queues/emailQueue.ts) |
+| **Worker Concurrency** | BullMQ Worker with `concurrency: 10` | [`backend/src/workers/emailWorker.ts`](backend/src/workers/emailWorker.ts) |
+| **Provider Throttling Delay** | Worker sleep delay (`DELAY_BETWEEN_EMAILS_MS: 250ms`) | [`backend/src/workers/emailWorker.ts`](backend/src/workers/emailWorker.ts) |
+| **Hourly Rate Limiting** | Redis atomic sliding window counters | [`backend/src/services/rateLimiter.ts`](backend/src/services/rateLimiter.ts) |
+| **Slack Rate Limit Alert** | Real Slack OAuth token exchange + Web API alert | [`backend/src/services/slackService.ts`](backend/src/services/slackService.ts) |
+| **Elasticsearch Search** | Elastic Client indexing & multi-field query fallback | [`backend/src/services/elasticService.ts`](backend/src/services/elasticService.ts) |
+| **Embedded Queue Monitor** | In-app Bull-Board with instant `✕ Close` & fast 3s live refresh | [`frontend/src/components/QueueMonitorView.tsx`](frontend/src/components/QueueMonitorView.tsx) |
+| **Google Login** | Real `@react-oauth/google` + Demo fallback | [`frontend/src/components/LoginScreen.tsx`](frontend/src/components/LoginScreen.tsx) |
+| **Compose & CSV Lead Parser** | Lead tags (`+N` badge), attachments, "Send Later", "⚡ Send Fast" | [`frontend/src/components/ComposeView.tsx`](frontend/src/components/ComposeView.tsx) |
+| **Scheduled & Sent Inboxes** | Exact Figma-matched row stream with amber time pills | [`frontend/src/components/InboxList.tsx`](frontend/src/components/InboxList.tsx) |
+| **Email Detail View** | Amanda Clark thread, tennis coach attachments, action icons | [`frontend/src/components/EmailDetailView.tsx`](frontend/src/components/EmailDetailView.tsx) |
 
 ---
 
