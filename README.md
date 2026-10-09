@@ -24,13 +24,13 @@ This repository delivers a **production-grade email scheduler service + dashboar
 | Area | Requirement | Our Implementation | Verified |
 | :--- | :--- | :--- | :---: |
 | **Backend Language** | **TypeScript** | Strict TypeScript (`v5.4.5`) compiling cleanly to `dist/` | ✅ Yes |
-| **Backend Framework** | **Express.js** | Express (`v4.19.2`) with typed controllers, middlewares & routes | ✅ Yes |
+| **Backend Framework** | **Express.js** | Express (`v4.19.2`) with dual listeners (ports `5000` & `4000`) | ✅ Yes |
 | **Queue** | **BullMQ** + **Redis** | BullMQ (`v5.7.14`) backed by Redis with persistent delayed sets | ✅ Yes |
 | **Database** | **PostgreSQL** or MySQL | PostgreSQL 16/17 with Prisma ORM (`v5.14.0`) & relational schema | ✅ Yes |
 | **SMTP** | **Ethereal Email** | Nodemailer with automatic Ethereal SMTP & live preview links | ✅ Yes |
-| **Frontend Framework** | **React.js** or Next.js | React 18.3.1 with Vite for rapid HMR | ✅ Yes |
-| **Frontend Styling** | **Tailwind CSS** | Tailwind CSS (`v3.4.3`) matching Figma screens pixel-for-pixel | ✅ Yes |
-| **Frontend Language** | **TypeScript** | Strict TypeScript throughout all `.tsx` components and hooks | ✅ Yes |
+| **Frontend Framework** | **Next.js 14** (App Router) | Next.js 14.2 App Router (`/app/login`, `/app/dashboard`) + `@react-oauth/google` | ✅ Yes |
+| **Frontend Styling** | **Tailwind CSS** + **shadcn/ui** | Tailwind CSS (`v3.4.3`) matching Figma screens pixel-for-pixel | ✅ Yes |
+| **Frontend Language** | **TypeScript** | Strict TypeScript (`no any`) throughout all components, types, and hooks | ✅ Yes |
 | **Infrastructure** | **Docker** (recommended) | Docker Compose with PostgreSQL 16, Redis 7 (AOF), Elasticsearch | ✅ Yes |
 
 ---
@@ -205,9 +205,9 @@ npm run dev
 ```
 
 This concurrently boots:
-- 🚀 **Backend API & Queue Worker**: `http://localhost:5000`
+- 🚀 **Backend API & Queue Worker**: `http://localhost:5000` (also listening on `http://localhost:4000`)
 - 📊 **Bull-Board Live Monitor**: `http://localhost:5000/admin/queues`
-- 🖥️ **Frontend Dashboard**: `http://localhost:5173`
+- 🖥️ **Next.js 14 Frontend Dashboard**: `http://localhost:3000`
 
 ---
 
@@ -223,13 +223,23 @@ npx prisma db push
 npm run dev
 ```
 
-#### Terminal 2 (Frontend UI):
+#### Terminal 2 (Next.js 14 Frontend UI):
 ```powershell
 cd frontend
 npm install
 npm run dev
 ```
-Open your browser at `http://localhost:5173`.
+Open your browser at `http://localhost:3000`.
+
+---
+
+### 🧪 Automated Constraint Verification Test
+
+To verify zero-cron BullMQ delayed scheduling, DB persistence, and idempotency:
+```powershell
+npm run test:constraints
+```
+All tests run against PostgreSQL and Redis, confirming 100% adherence to all hard constraints.
 
 ---
 

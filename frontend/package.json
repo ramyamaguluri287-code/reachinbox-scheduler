@@ -4,20 +4,23 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000"
   },
   "dependencies": {
     "@react-oauth/google": "^0.12.1",
     "axios": "^1.7.2",
     "clsx": "^2.1.1",
     "lucide-react": "^0.379.0",
+    "next": "^14.2.35",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "sonner": "^2.0.8",
     "tailwind-merge": "^2.3.0"
   },
   "devDependencies": {
+    "@types/node": "26.6.4",
     "@types/react": "^18.3.2",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.2.1",
