@@ -1,6 +1,6 @@
 import React from 'react';
 import { User } from '../types';
-import { Clock, Send, Activity, ChevronDown, LogOut, ExternalLink, Slack, CheckCircle2 } from 'lucide-react';
+import { Clock, Send, Activity, ChevronDown, LogOut, ExternalLink, Slack, CheckCircle2, X } from 'lucide-react';
 
 interface SidebarProps {
   user: User;
@@ -117,8 +117,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           {/* Unified BullMQ Queue Monitor Tab */}
           <button
-            onClick={() => onTabChange('queues')}
-            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-semibold transition ${
+            onClick={() => onTabChange(activeTab === 'queues' ? 'scheduled' : 'queues')}
+            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-semibold transition group ${
               activeTab === 'queues'
                 ? 'bg-[#EAF8F1] text-[#00A859]'
                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
@@ -128,10 +128,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <Activity className="w-4 h-4" />
               <span>Queue Monitor</span>
             </div>
-            <span className="flex items-center space-x-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 text-emerald-800">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>LIVE</span>
-            </span>
+            {activeTab === 'queues' ? (
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTabChange('scheduled');
+                }}
+                className="p-1 rounded-full hover:bg-emerald-200 text-emerald-800 transition"
+                title="Close Queue Monitor (X)"
+              >
+                <X className="w-3.5 h-3.5 stroke-[2.5]" />
+              </span>
+            ) : (
+              <span className="flex items-center space-x-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 text-emerald-800">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span>LIVE</span>
+              </span>
+            )}
           </button>
         </nav>
       </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Activity, RefreshCw, ExternalLink, X, ArrowLeft } from 'lucide-react';
+import { Activity, RefreshCw, X, ArrowLeft } from 'lucide-react';
 
 interface QueueMonitorViewProps {
   onClose: () => void;
@@ -44,35 +44,25 @@ export const QueueMonitorView: React.FC<QueueMonitorViewProps> = ({ onClose }) =
           </div>
         </div>
 
-        {/* Action Controls + Instant Close Button */}
-        <div className="flex items-center space-x-2.5">
+        {/* Action Controls + Instant Close 'X' Mark */}
+        <div className="flex items-center space-x-2">
           <button
             onClick={handleRefresh}
-            className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition text-xs flex items-center space-x-1"
+            className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-gray-900 transition text-xs flex items-center space-x-1"
             title="Reload queue view"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span className="text-[11px] font-medium hidden sm:inline">Refresh</span>
           </button>
 
-          <a
-            href="http://localhost:5000/admin/queues"
-            target="_blank"
-            rel="noreferrer"
-            className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition text-xs flex items-center space-x-1"
-            title="Open in external browser tab"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
-
-          {/* Primary Instant Close Button */}
+          {/* Primary Instant Close 'X' Button */}
           <button
             onClick={onClose}
-            className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 hover:text-gray-900 transition shadow-sm ml-2"
-            title="Close Queue Dashboard and return to Inbox"
+            className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-gray-100 hover:bg-red-50 text-gray-700 hover:text-red-600 text-xs font-semibold border border-gray-200/90 transition shadow-sm hover:border-red-200"
+            title="Close Queue Dashboard"
           >
-            <X className="w-3.5 h-3.5" />
-            <span>Close Dashboard</span>
+            <X className="w-4 h-4 stroke-[2.5]" />
+            <span>Close</span>
           </button>
         </div>
       </div>
