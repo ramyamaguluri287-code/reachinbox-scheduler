@@ -1,6 +1,6 @@
 import React from 'react';
-import { EmailJob } from '../types';
-import { Search, SlidersHorizontal, RefreshCw, Star, Clock, Send, ExternalLink } from 'lucide-react';
+import { User, EmailJob } from '../types';
+import { Search, SlidersHorizontal, RefreshCw, Star, Clock, Send, ExternalLink, LogOut } from 'lucide-react';
 
 interface InboxListProps {
   emails: EmailJob[];
@@ -9,6 +9,8 @@ interface InboxListProps {
   onSearchChange: (q: string) => void;
   onRefresh: () => void;
   loading: boolean;
+  user?: User | null;
+  onLogout?: () => void;
   onSelectEmail: (email: EmailJob) => void;
 }
 
@@ -19,12 +21,14 @@ export const InboxList: React.FC<InboxListProps> = ({
   onSearchChange,
   onRefresh,
   loading,
+  user,
+  onLogout,
   onSelectEmail,
 }) => {
   return (
     <div className="flex-1 flex flex-col h-screen overflow-hidden bg-white">
-      {/* Top Search & Filter Bar matching Figma */}
-      <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between gap-4 shrink-0">
+      {/* Top Search & Filter Bar matching Figma with User Profile Header */}
+      <div className="px-6 py-3.5 border-b border-gray-100 flex items-center justify-between gap-4 shrink-0">
         {/* Search Input matching Figma */}
         <div className="relative flex-1 max-w-lg">
           <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -37,8 +41,8 @@ export const InboxList: React.FC<InboxListProps> = ({
           />
         </div>
 
-        {/* Action icons on right */}
-        <div className="flex items-center space-x-2 text-gray-400">
+        {/* Action icons & User Profile in Top Header */}
+        <div className="flex items-center space-x-2.5 text-gray-400">
           <button
             onClick={onRefresh}
             className="p-1.5 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition"
@@ -52,6 +56,36 @@ export const InboxList: React.FC<InboxListProps> = ({
           >
             <SlidersHorizontal className="w-4 h-4" />
           </button>
+
+          {/* User Profile in Top Header: Name, Email, Avatar, and Logout */}
+          {user && (
+            <div className="flex items-center space-x-2.5 pl-3 border-l border-gray-100">
+              <img
+                src={user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
+                alt={user.name || 'User Avatar'}
+                className="w-7 h-7 rounded-full object-cover border border-gray-200"
+              />
+              <div className="text-left hidden sm:block">
+                <p className="text-xs font-bold text-gray-800 leading-tight">
+                  {user.name || 'Oliver Brown'}
+                </p>
+                <p className="text-[10px] text-gray-400 leading-none">
+                  {user.email || 'oliver.brown@domain.io'}
+                </p>
+              </div>
+
+              {onLogout && (
+                <button
+                  onClick={onLogout}
+                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition ml-1 flex items-center space-x-1"
+                  title="Logout"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span className="text-[11px] font-medium hidden md:inline">Logout</span>
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

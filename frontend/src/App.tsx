@@ -231,6 +231,8 @@ export function App() {
       ) : currentView === 'detail' && selectedEmail ? (
         <EmailDetailView
           email={selectedEmail}
+          user={user}
+          onLogout={handleLogout}
           onBack={() => setCurrentView('inbox')}
         />
       ) : activeTab === 'queues' ? (
@@ -243,6 +245,8 @@ export function App() {
           onSearchChange={setSearchQuery}
           onRefresh={loadEmails}
           loading={loading}
+          user={user}
+          onLogout={handleLogout}
           onSelectEmail={(email) => {
             setSelectedEmail(email);
             setCurrentView('detail');

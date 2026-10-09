@@ -1,13 +1,15 @@
 import React from 'react';
-import { ArrowLeft, Star, Archive, Trash2, ExternalLink } from 'lucide-react';
-import { EmailJob } from '../types';
+import { ArrowLeft, Star, Archive, Trash2, ExternalLink, LogOut } from 'lucide-react';
+import { User, EmailJob } from '../types';
 
 interface EmailDetailViewProps {
   email: EmailJob;
+  user?: User | null;
+  onLogout?: () => void;
   onBack: () => void;
 }
 
-export const EmailDetailView: React.FC<EmailDetailViewProps> = ({ email, onBack }) => {
+export const EmailDetailView: React.FC<EmailDetailViewProps> = ({ email, user, onLogout, onBack }) => {
   const sentDate = new Date(email.sentAt || email.scheduledAt);
   const formattedDate = sentDate.toLocaleDateString('en-US', {
     month: 'short',
@@ -21,7 +23,7 @@ export const EmailDetailView: React.FC<EmailDetailViewProps> = ({ email, onBack 
 
   return (
     <div className="flex-1 flex flex-col h-screen overflow-y-auto bg-white">
-      {/* Top Header matching Figma Screenshot */}
+      {/* Top Header matching Figma Screenshot with User Profile */}
       <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between shrink-0">
         <div className="flex items-center space-x-3 overflow-hidden">
           <button
@@ -35,8 +37,8 @@ export const EmailDetailView: React.FC<EmailDetailViewProps> = ({ email, onBack 
           </h2>
         </div>
 
-        {/* Action icons on right matching Figma: Star, Archive, Trash, User Avatar */}
-        <div className="flex items-center space-x-3 text-gray-400">
+        {/* Action icons on right matching Figma: Star, Archive, Trash, User Avatar & Logout */}
+        <div className="flex items-center space-x-2.5 text-gray-400">
           {email.etherealPreviewUrl && (
             <a
               href={email.etherealPreviewUrl}
@@ -57,11 +59,35 @@ export const EmailDetailView: React.FC<EmailDetailViewProps> = ({ email, onBack 
           <button className="p-1 hover:text-red-500 transition" title="Delete">
             <Trash2 className="w-4 h-4" />
           </button>
-          <img
-            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100"
-            alt="User avatar"
-            className="w-6 h-6 rounded-full object-cover ml-2 border border-gray-200"
-          />
+
+          {/* User Profile in Top Header */}
+          {user && (
+            <div className="flex items-center space-x-2 pl-2 border-l border-gray-100">
+              <img
+                src={user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
+                alt={user.name || 'User Avatar'}
+                className="w-7 h-7 rounded-full object-cover border border-gray-200"
+              />
+              <div className="text-left hidden sm:block">
+                <p className="text-xs font-bold text-gray-800 leading-tight">
+                  {user.name || 'Oliver Brown'}
+                </p>
+                <p className="text-[10px] text-gray-400 leading-none">
+                  {user.email || 'oliver.brown@domain.io'}
+                </p>
+              </div>
+
+              {onLogout && (
+                <button
+                  onClick={onLogout}
+                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition ml-1"
+                  title="Logout"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
