@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { LogOut, Slack, CheckCircle2 } from 'lucide-react';
+import { LogOut, Slack, CheckCircle2, Activity } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { Avatar } from './ui/avatar';
 import { api } from '../lib/api';
@@ -53,8 +53,20 @@ export const Header: React.FC = () => {
         </div>
       </div>
 
-      {/* Right: Slack Connect + Avatar + Name + Email + Logout */}
-      <div className="flex items-center space-x-4">
+      {/* Right: BullMQ Live Queues + Slack Connect + Avatar + Name + Email + Logout */}
+      <div className="flex items-center space-x-3 sm:space-x-4">
+        {/* Live BullMQ Queues Link on Same URL */}
+        <a
+          href="/admin/queues"
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200/80 rounded-full text-xs font-semibold transition shadow-xs"
+          title="Watch BullMQ deliver jobs in real time at /admin/queues"
+        >
+          <Activity className="w-3.5 h-3.5 text-indigo-600 animate-pulse" />
+          <span>Live Queues</span>
+        </a>
+
         {/* Slack Connection Pill */}
         {user?.isSlackConnected ? (
           <div className="flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-xs font-semibold">
