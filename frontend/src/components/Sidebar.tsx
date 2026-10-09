@@ -1,11 +1,11 @@
 import React from 'react';
 import { User } from '../types';
-import { Clock, Send, ChevronDown, LogOut, ExternalLink, Slack, CheckCircle2 } from 'lucide-react';
+import { Clock, Send, Activity, ChevronDown, LogOut, ExternalLink, Slack, CheckCircle2 } from 'lucide-react';
 
 interface SidebarProps {
   user: User;
-  activeTab: 'scheduled' | 'sent';
-  onTabChange: (tab: 'scheduled' | 'sent') => void;
+  activeTab: 'scheduled' | 'sent' | 'queues';
+  onTabChange: (tab: 'scheduled' | 'sent' | 'queues') => void;
   onOpenCompose: () => void;
   scheduledCount: number;
   sentCount: number;
@@ -112,6 +112,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
               }`}
             >
               {sentCount}
+            </span>
+          </button>
+
+          {/* Unified BullMQ Queue Monitor Tab */}
+          <button
+            onClick={() => onTabChange('queues')}
+            className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-lg text-xs font-semibold transition ${
+              activeTab === 'queues'
+                ? 'bg-[#EAF8F1] text-[#00A859]'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+            }`}
+          >
+            <div className="flex items-center space-x-2.5">
+              <Activity className="w-4 h-4" />
+              <span>Queue Monitor</span>
+            </div>
+            <span className="flex items-center space-x-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 text-emerald-800">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>LIVE</span>
             </span>
           </button>
         </nav>

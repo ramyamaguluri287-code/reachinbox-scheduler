@@ -5,6 +5,7 @@ import { Sidebar } from './components/Sidebar';
 import { InboxList } from './components/InboxList';
 import { ComposeView } from './components/ComposeView';
 import { EmailDetailView } from './components/EmailDetailView';
+import { QueueMonitorView } from './components/QueueMonitorView';
 import { LoginScreen } from './components/LoginScreen';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 
@@ -16,8 +17,8 @@ export function App() {
   const [currentView, setCurrentView] = useState<'inbox' | 'compose' | 'detail'>('inbox');
   const [selectedEmail, setSelectedEmail] = useState<EmailJob | null>(null);
 
-  // Tabs: 'scheduled' | 'sent'
-  const [activeTab, setActiveTab] = useState<'scheduled' | 'sent'>('scheduled');
+  // Tabs: 'scheduled' | 'sent' | 'queues'
+  const [activeTab, setActiveTab] = useState<'scheduled' | 'sent' | 'queues'>('scheduled');
   const [searchQuery, setSearchQuery] = useState('');
 
   const [scheduledEmails, setScheduledEmails] = useState<EmailJob[]>([]);
@@ -64,11 +65,12 @@ export function App() {
     setLoading(true);
     try {
       if (searchQuery.trim()) {
-        const results = await api.searchEmails(searchQuery, activeTab);
-        if (activeTab === 'scheduled') {
-          setScheduledEmails(results.filter((e) => ['SCHEDULED', 'PROCESSING', 'RESCHEDULED'].includes(e.status)));
-        } else {
+        const filter = activeTab === 'sent' ? 'sent' : 'scheduled';
+        const results = await api.searchEmails(searchQuery, filter);
+        if (activeTab === 'sent') {
           setSentEmails(results.filter((e) => ['SENT', 'FAILED'].includes(e.status)));
+        } else {
+          setScheduledEmails(results.filter((e) => ['SCHEDULED', 'PROCESSING', 'RESCHEDULED'].includes(e.status)));
         }
       } else {
         const [scheduled, sent] = await Promise.all([
@@ -231,6 +233,8 @@ export function App() {
           email={selectedEmail}
           onBack={() => setCurrentView('inbox')}
         />
+      ) : activeTab === 'queues' ? (
+        <QueueMonitorView />
       ) : (
         <InboxList
           emails={activeTab === 'scheduled' ? scheduledEmails : sentEmails}
