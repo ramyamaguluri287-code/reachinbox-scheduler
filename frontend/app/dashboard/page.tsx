@@ -8,13 +8,14 @@ import { InboxList } from '../../src/components/InboxList';
 import { ComposeView } from '../../src/components/ComposeView';
 import { EmailDetailView } from '../../src/components/EmailDetailView';
 import { QueueMonitorView } from '../../src/components/QueueMonitorView';
+import { LoginScreen } from '../../src/components/LoginScreen';
 import { api as srcApi } from '../../src/api/client';
 import { EmailJob, ScheduleEmailPayload } from '../../src/types';
 import { toast } from 'sonner';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, isAuthenticated, loading: authLoading, logout, setUser } = useAuth();
+  const { user, isAuthenticated, loading: authLoading, logout, setUser, loginWithGoogle, loginDemo } = useAuth();
 
   // Views: 'inbox' | 'compose' | 'detail'
   const [currentView, setCurrentView] = useState<'inbox' | 'compose' | 'detail'>('inbox');
@@ -27,13 +28,6 @@ export default function DashboardPage() {
   const [scheduledEmails, setScheduledEmails] = useState<EmailJob[]>([]);
   const [sentEmails, setSentEmails] = useState<EmailJob[]>([]);
   const [loading, setLoading] = useState(false);
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      router.replace('/login');
-    }
-  }, [authLoading, isAuthenticated, router]);
 
   // Load emails
   const loadEmails = useCallback(async () => {
@@ -127,11 +121,36 @@ export default function DashboardPage() {
     }
   };
 
-  if (authLoading || !user) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#F9FAFB]">
         <div className="w-8 h-8 rounded-full border-2 border-[#00A859] border-t-transparent animate-spin" />
       </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <LoginScreen
+        onGoogleSuccess={async (credential) => {
+          try {
+            await loginWithGoogle(credential);
+            toast.success('Successfully logged in with Google!');
+          } catch (err: any) {
+            toast.error(err.response?.data?.error || err.message || 'Google authentication failed');
+          }
+        }}
+        onDemoLogin={async () => {
+          try {
+            await loginDemo();
+            toast.success('Logged in as Oliver Brown');
+          } catch (err: any) {
+            toast.error('Login failed: ' + err.message);
+          }
+        }}
+        loading={authLoading}
+        error={null}
+      />
     );
   }
 
