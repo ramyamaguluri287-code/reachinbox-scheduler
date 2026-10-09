@@ -590,6 +590,87 @@ Use this structured script when recording your submission video:
 | **2:45 – 3:45** | **Crash & Restart Persistence** | • Schedule another email for 2 minutes in the future.<br>• Stop the backend terminal (`Ctrl + C`) to simulate an unexpected crash.<br>• Explain how Redis AOF and PostgreSQL maintain state.<br>• Restart the backend and show the job delivering right on time without duplicates. |
 | **3:45 – 5:00** | **Rate Limiting, Search & Slack Alert** | • Schedule a batch with hourly limit set to 1.<br>• Show the second email being marked `RESCHEDULED` to the next hour window.<br>• Show the live Slack notification card in your connected Slack channel.<br>• Type a keyword in the top search bar to show instant Elasticsearch / DB results. |
 
+## 📧 Setting Up Ethereal Email & Environment Variables
+
+### How Ethereal Email Works
+[Ethereal Email](https://ethereal.email) is a fake SMTP service created by Nodemailer for testing email delivery safely without sending actual emails to real recipients.
+
+1. **Zero-Configuration Mode (Default)**:
+   - If `ETHEREAL_USER` and `ETHEREAL_PASS` are left empty in `backend/.env`, the backend will **automatically create a temporary test account** on boot via `nodemailer.createTestAccount()`.
+   - The generated credentials and web login URL will be printed directly in the backend terminal logs.
+
+2. **Custom Account Mode (Optional)**:
+   - Navigate to [ethereal.email/create](https://ethereal.email/create).
+   - Copy your `User` and `Password`.
+   - Paste them into `backend/.env`:
+     ```ini
+     ETHEREAL_USER="your_user@ethereal.email"
+     ETHEREAL_PASS="your_password"
+     ```
+
+3. **Live Web Previews**:
+   - Whenever an email is delivered, Nodemailer captures the dispatch and generates a preview URL using `nodemailer.getTestMessageUrl(info)`.
+   - This URL is persisted to `emailJob.etherealPreviewUrl` in PostgreSQL.
+   - In the frontend **Sent** tab, clicking the green **Preview** link opens the rendered HTML email directly in Ethereal's web viewer.
+
+---
+
+## 🧩 Comprehensive Feature Implementation Mapping
+
+| Category | Feature | Technical Implementation | File Reference |
+| :--- | :--- | :--- | :--- |
+| **Backend** | **Zero-Cron Delayed Scheduler** | BullMQ Delayed Queue (`emailQueue.add` with `{ delay, jobId }`) | [`backend/src/queues/emailQueue.ts`](file:///C:/Users/venug/.gemini/antigravity/scratch/reachinbox-scheduler/backend/src/queues/emailQueue.ts) |
+| **Backend** | **Persistence on Restart** | Redis AOF + PostgreSQL state + `reconcilePendingJobs()` on startup | [`backend/src/queues/emailQueue.ts`](file:///C:/Users/venug/.gemini/antigravity/scratch/reachinbox-scheduler/backend/src/queues/emailQueue.ts) |
+| **Backend** | **Worker Concurrency** | 10 concurrent worker consumers processing delayed queues in parallel | [`backend/src/workers/emailWorker.ts`](file:///C:/Users/venug/.gemini/antigravity/scratch/reachinbox-scheduler/backend/src/workers/emailWorker.ts) |
+| **Backend** | **Provider Sleep Throttling** | Enforces `250ms` delay between individual email deliveries | [`backend/src/workers/emailWorker.ts`](file:///C:/Users/venug/.gemini/antigravity/scratch/reachinbox-scheduler/backend/src/workers/emailWorker.ts) |
+| **Backend** | **Sliding-Window Rate Limiting**| Atomic Redis window counters (`rl:sender:<email>:<window>`) with auto-rescheduling | [`backend/src/services/rateLimiter.ts`](file:///C:/Users/venug/.gemini/antigravity/scratch/reachinbox-scheduler/backend/src/services/rateLimiter.ts) |
+| **Backend** | **Real-Time Slack Alerts** | OAuth 2.0 exchange + Slack Web API notification with deduplication | [`backend/src/services/slackService.ts`](file:///C:/Users/venug/.gemini/antigravity/scratch/reachinbox-scheduler/backend/src/services/slackService.ts) |
+| **Backend** | **Search Engine** | Elasticsearch multi-match queries with database `ILIKE` fallback | [`backend/src/services/elasticService.ts`](file:///C:/Users/venug/.gemini/antigravity/scratch/reachinbox-scheduler/backend/src/services/elasticService.ts) |
+| **Backend** | **Live Queue Inspector** | Bull-Board mounted on `/admin/queues` with dual port listeners | [`backend/src/queues/bullBoard.ts`](file:///C:/Users/venug/.gemini/antigravity/scratch/reachinbox-scheduler/backend/src/queues/bullBoard.ts) |
+| **Frontend** | **Single URL Architecture** | All views, authentication, and reverse-proxied Bull-Board unified at `http://localhost:3000` | [`frontend/app/page.tsx`](file:///C:/Users/venug/.gemini/antigravity/scratch/reachinbox-scheduler/frontend/app/page.tsx) |
+| **Frontend** | **Authentication** | Real `@react-oauth/google` integration + 1-click Demo Sign-in | [`frontend/src/components/LoginScreen.tsx`](file:///C:/Users/venug/.gemini/antigravity/scratch/reachinbox-scheduler/frontend/src/components/LoginScreen.tsx) |
+| **Frontend** | **Dashboard Header & Queue Toggle** | Live BullMQ status pill + expandable inline iframe monitor | [`frontend/src/components/InboxList.tsx`](file:///C:/Users/venug/.gemini/antigravity/scratch/reachinbox-scheduler/frontend/src/components/InboxList.tsx) |
+| **Frontend** | **Figma Email Streams** | Scheduled & Sent tabs with 12-hour AM/PM pills, capitalized names, bold subjects | [`frontend/src/components/InboxList.tsx`](file:///C:/Users/venug/.gemini/antigravity/scratch/reachinbox-scheduler/frontend/src/components/InboxList.tsx) |
+| **Frontend** | **Composer & Lead Parser** | Rich editor with CSV lead upload, recipient pill tags, "Send Later" calendar, "⚡ Send Fast" | [`frontend/src/components/ComposeView.tsx`](file:///C:/Users/venug/.gemini/antigravity/scratch/reachinbox-scheduler/frontend/src/components/ComposeView.tsx) |
+| **Frontend** | **Email Detail View** | Detailed view matching Figma with thread history, attachments, and actions | [`frontend/src/components/EmailDetailView.tsx`](file:///C:/Users/venug/.gemini/antigravity/scratch/reachinbox-scheduler/frontend/src/components/EmailDetailView.tsx) |
+| **Frontend** | **Dedicated Queue Monitor Tab** | Full-height embedded Bull-Board monitor with instant close button | [`frontend/src/components/QueueMonitorView.tsx`](file:///C:/Users/venug/.gemini/antigravity/scratch/reachinbox-scheduler/frontend/src/components/QueueMonitorView.tsx) |
+
+---
+
+## ⚖️ Assumptions, Shortcuts, and Trade-offs
+
+### 1. Assumptions
+- **Redis & PostgreSQL Availability**: Assumed local or Dockerized instances of Redis (`:6379`) and PostgreSQL (`:5432`) are available.
+- **Hourly Window Boundaries**: Rate limit windows are calculated based on calendar-hour buckets (e.g. `10:00:00` to `11:00:00`). This ensures atomic key expiration in Redis and predictable rollover calculations.
+- **Sender Quota Defaults**: If no custom hourly limit is specified in the campaign payload, the system defaults to `200 emails/hour` with a `250ms` provider throttle delay.
+
+### 2. Shortcuts
+- **Automatic Ethereal Provisioning**: The backend automatically provisions a fake SMTP account on launch if credentials are not provided. This eliminates any manual account creation barrier for reviewers.
+- **One-Click Demo Authentication**: Alongside real Google OAuth, a **Demo Sign-in** button is provided on the login page so reviewers can evaluate the application immediately without needing Google Cloud Console credentials.
+- **Seed Script**: A pre-configured database seed (`npm run seed`) populates initial sample campaigns matching the ReachInbox Figma screens.
+
+### 3. Trade-offs
+- **Single-Origin Reverse Proxy**: Rather than forcing the evaluator to navigate to separate ports (`:5000` for backend/Bull-Board and `:3000` for frontend), Next.js App Router reverse-proxies `/admin/queues` directly on port `3000`. This satisfies the single URL requirement with zero CORS issues.
+- **Auto-Rescheduling vs. Job Failure**: When an hourly rate limit is hit, jobs are **rescheduled to the next hour window** rather than marked as `FAILED`. *Trade-off*: Dispatches are delayed until the next window, but zero campaigns or leads are dropped.
+- **Redis Sorted Sets vs. Cron Polling**: BullMQ delayed jobs are held in Redis sorted sets indexed by timestamp. *Trade-off*: Requires Redis persistence (AOF/RDB) to survive crashes, but provides sub-millisecond precision and zero database polling overhead compared to traditional cron jobs.
+
+---
+
+## 📦 Submission Checklist
+
+- [x] **Private GitHub Repository created**
+- [x] **Collaborator access granted to**:
+  - `Mitrajit`
+  - `Yadav036`
+- [x] **Comprehensive README documentation included**:
+  - Backend and frontend instructions
+  - Ethereal Email setup & environment variables
+  - Architecture breakdown (Zero-cron, persistence, rate limiting, concurrency)
+  - Features implemented mapping table
+  - Assumptions, shortcuts, and trade-offs
+- [x] **Submission form completed**:
+  - [ClickUp Submission Form](https://forms.clickup.com/9005062261/f/8cbwp3n-8876/6NNNJ92DV93PQTAYST)
+
 ---
 
 ## 📄 License & Attribution
