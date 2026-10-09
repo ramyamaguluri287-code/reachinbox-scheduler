@@ -578,17 +578,6 @@ The user interface matches the ReachInbox Figma specification:
 
 ---
 
-## 🎥 5-Minute Demo Video Walkthrough Script
-
-Use this structured script when recording your submission video:
-
-| Timestamp | Topic | What to Demonstrate on Screen |
-| :--- | :--- | :--- |
-| **0:00 – 0:45** | **Architecture & Single URL** | • Navigate to `http://localhost:3000`.<br>• Point out the single URL architecture (no port switching).<br>• Show the user card, top search bar, and Slack status pill.<br>• Briefly explain BullMQ delayed queue architecture (zero cron jobs). |
-| **0:45 – 1:45** | **Composing & CSV Leads** | • Click **Compose**.<br>• Drag and drop or paste a CSV of lead emails. Show the recipient count badge.<br>• Set Delay between sends to `250ms`, Hourly Limit to `10`.<br>• Click "Send Later" and schedule for 1 minute in the future. |
-| **1:45 – 2:45** | **Inline BullMQ Board & Delivery** | • Click **`⚡ BullMQ Dashboard`** right above the schedule list.<br>• Show the live job sitting in BullMQ's **Delayed** queue.<br>• Watch the timer reach 0: the job moves to **Active**, then **Completed**.<br>• Show the job appearing in the **Sent** tab and click the **Preview** link to display the email in Ethereal. |
-| **2:45 – 3:45** | **Crash & Restart Persistence** | • Schedule another email for 2 minutes in the future.<br>• Stop the backend terminal (`Ctrl + C`) to simulate an unexpected crash.<br>• Explain how Redis AOF and PostgreSQL maintain state.<br>• Restart the backend and show the job delivering right on time without duplicates. |
-| **3:45 – 5:00** | **Rate Limiting, Search & Slack Alert** | • Schedule a batch with hourly limit set to 1.<br>• Show the second email being marked `RESCHEDULED` to the next hour window.<br>• Show the live Slack notification card in your connected Slack channel.<br>• Type a keyword in the top search bar to show instant Elasticsearch / DB results. |
 
 ## 📧 Setting Up Ethereal Email & Environment Variables
 
