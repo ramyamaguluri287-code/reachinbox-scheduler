@@ -4,6 +4,7 @@ import { ENV } from './config/env.js';
 import { serverAdapter } from './queues/bullBoard.js';
 import { setupEmailWorker } from './workers/emailWorker.js';
 import { initElasticIndex } from './services/elasticService.js';
+import { reconcilePendingJobs } from './queues/emailQueue.js';
 import authRoutes from './routes/authRoutes.js';
 import emailRoutes from './routes/emailRoutes.js';
 import slackRoutes from './routes/slackRoutes.js';
@@ -48,6 +49,9 @@ app.listen(PORT, async () => {
 
   // Spin up BullMQ background worker
   setupEmailWorker();
+
+  // Reconcile and verify pending jobs from DB to guarantee resilience across restarts
+  await reconcilePendingJobs();
 });
 
 export default app;
