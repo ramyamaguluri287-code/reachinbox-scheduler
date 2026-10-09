@@ -151,56 +151,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </nav>
       </div>
 
-      {/* Bottom Integrations & Controls */}
-      <div className="p-4 border-t border-gray-100 space-y-2">
-        {/* Bull-Board Quick Access on same URL */}
-        <a
-          href="/admin/queues"
-          target="_blank"
-          rel="noreferrer"
-          className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 transition"
-          title="Open BullMQ Live Dashboard"
-        >
-          <span className="flex items-center space-x-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>BullMQ Board</span>
-          </span>
-          <ExternalLink className="w-3.5 h-3.5 text-gray-400" />
-        </a>
-
-        {/* Slack Connection Pill */}
-        {user.isSlackConnected ? (
-          <div className="flex items-center justify-between px-3 py-1.5 bg-emerald-50 border border-emerald-100 rounded-lg text-[11px] text-emerald-800">
-            <div className="flex items-center space-x-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-              <span className="font-medium">Slack Active</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <button
-                onClick={onSendTestSlack}
-                className="underline text-[10px] text-emerald-700 hover:text-emerald-900"
-              >
-                Test
-              </button>
-              <button
-                onClick={onDisconnectSlack}
-                className="text-gray-400 hover:text-red-500 ml-1"
-              >
-                ×
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button
-            onClick={onConnectSlack}
-            className="w-full flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-900 text-white hover:bg-gray-800 transition"
-          >
-            <Slack className="w-3.5 h-3.5" />
-            <span>Connect Slack</span>
-          </button>
-        )}
-
-        {/* Logout */}
+      {/* Bottom Controls */}
+      <div className="p-4 border-t border-gray-100">
         <button
           onClick={onLogout}
           className="w-full flex items-center space-x-2 px-3 py-2 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 transition"

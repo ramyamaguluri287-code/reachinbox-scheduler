@@ -1,8 +1,20 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { User, EmailJob } from '../types';
-import { Search, SlidersHorizontal, RefreshCw, Star, Clock, Send, ExternalLink, LogOut, Activity, Slack, CheckCircle2 } from 'lucide-react';
+import {
+  Search,
+  SlidersHorizontal,
+  RefreshCw,
+  Star,
+  Clock,
+  Send,
+  ExternalLink,
+  LogOut,
+  Activity,
+  Slack,
+  CheckCircle2,
+} from 'lucide-react';
 
 interface InboxListProps {
   emails: EmailJob[];
@@ -35,9 +47,11 @@ export const InboxList: React.FC<InboxListProps> = ({
   onDisconnectSlack,
   onSendTestSlack,
 }) => {
+  const [isQueueExpanded, setIsQueueExpanded] = useState(false);
+
   return (
     <div className="flex-1 flex flex-col h-screen overflow-hidden bg-white">
-      {/* Top Search & Filter Bar matching Figma with User Profile Header */}
+      {/* Top Search & Action Bar matching Figma */}
       <div className="px-6 py-3.5 border-b border-gray-100 flex items-center justify-between gap-3 shrink-0">
         {/* Search Input matching Figma */}
         <div className="relative flex-1 max-w-md">
@@ -52,23 +66,20 @@ export const InboxList: React.FC<InboxListProps> = ({
         </div>
 
         {/* Action icons & User Profile in Top Header */}
-        <div className="flex items-center space-x-2 text-gray-500">
-          {/* Top BullMQ Dashboard Button */}
-          {onOpenQueueMonitor && (
-            <button
-              onClick={onOpenQueueMonitor}
-              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-semibold transition shadow-2xs"
-              title="Open BullMQ Queue Dashboard"
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>BullMQ Board</span>
-              <ExternalLink className="w-3 h-3 text-emerald-600" />
-            </button>
-          )}
+        <div className="flex items-center space-x-2.5 text-gray-500">
+          {/* Top BullMQ Dashboard Shortcut */}
+          <button
+            onClick={() => setIsQueueExpanded(!isQueueExpanded)}
+            className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-semibold transition shadow-2xs"
+            title="Toggle Live BullMQ Queue Dashboard"
+          >
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>BullMQ Board</span>
+          </button>
 
           {/* Top Slack Button */}
           {user?.isSlackConnected ? (
-            <div className="hidden lg:inline-flex items-center space-x-1 px-2.5 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-[11px] font-semibold">
+            <div className="hidden sm:inline-flex items-center space-x-1 px-2.5 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-[11px] font-semibold">
               <CheckCircle2 className="w-3 h-3 text-emerald-600" />
               <span>Slack Active</span>
               {onSendTestSlack && (
@@ -81,7 +92,7 @@ export const InboxList: React.FC<InboxListProps> = ({
             onConnectSlack && (
               <button
                 onClick={onConnectSlack}
-                className="hidden lg:inline-flex items-center space-x-1 px-2.5 py-1 bg-gray-900 hover:bg-gray-800 text-white rounded-full text-[11px] font-medium transition"
+                className="hidden sm:inline-flex items-center space-x-1 px-2.5 py-1 bg-gray-900 hover:bg-gray-800 text-white rounded-full text-[11px] font-medium transition"
               >
                 <Slack className="w-3 h-3" />
                 <span>Slack</span>
@@ -135,46 +146,71 @@ export const InboxList: React.FC<InboxListProps> = ({
         </div>
       </div>
 
-      {/* Schedule Top Header: BullMQ Dashboard & Queue Status */}
-      <div className="px-6 py-3 bg-[#F8FAF9] border-b border-gray-100 flex items-center justify-between shrink-0">
-        <div className="flex items-center space-x-2.5">
-          <div className="w-7 h-7 rounded-lg bg-[#EAF8F1] text-[#00A859] flex items-center justify-center shrink-0 shadow-2xs">
-            <Activity className="w-3.5 h-3.5" />
+      {/* Schedule Top Header: BullMQ Dashboard & Live Queue Status */}
+      <div className="bg-[#F8FAF9] border-b border-gray-100 shrink-0 transition-all">
+        <div className="px-6 py-3 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 rounded-lg bg-[#EAF8F1] text-[#00A859] flex items-center justify-center shrink-0 shadow-2xs">
+              <Activity className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center space-x-2">
+                <h3 className="text-xs font-bold text-gray-900 tracking-tight">
+                  {type === 'scheduled' ? 'Scheduled Outreach Queue' : 'Delivered Sent Outreach'}
+                </h3>
+                <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>BullMQ Active ({emails.length} Jobs)</span>
+                </span>
+              </div>
+              <p className="text-[11px] text-gray-400 mt-0.5">
+                {type === 'scheduled'
+                  ? 'Real-time BullMQ delayed job scheduler backed by Redis sorted sets.'
+                  : 'Delivered outreach emails sent via fake SMTP (Ethereal Email).'}
+              </p>
+            </div>
           </div>
+
+          {/* Action Buttons: Live Queue Dashboard Toggle & Fullscreen */}
           <div className="flex items-center space-x-2">
-            <h3 className="text-xs font-bold text-gray-900 tracking-tight">
-              {type === 'scheduled' ? 'Scheduled Emails' : 'Sent Emails'}
-            </h3>
-            <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>BullMQ Engine: {emails.length} Jobs</span>
-            </span>
+            <button
+              onClick={() => setIsQueueExpanded(!isQueueExpanded)}
+              className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition shadow-xs ${
+                isQueueExpanded
+                  ? 'bg-emerald-700 text-white'
+                  : 'bg-[#00A859] hover:bg-[#00924d] text-white'
+              }`}
+              title="Toggle Live BullMQ Queue Dashboard in-place"
+            >
+              <Activity className="w-3.5 h-3.5" />
+              <span>{isQueueExpanded ? 'Hide BullMQ Board' : '⚡ BullMQ Dashboard'}</span>
+            </button>
+
+            <a
+              href="/admin/queues"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-full bg-white hover:bg-gray-100 text-gray-700 border border-gray-200 text-xs font-medium transition shadow-2xs"
+              title="Open BullMQ Dashboard in fullscreen tab"
+            >
+              <span>Fullscreen</span>
+              <ExternalLink className="w-3 h-3 text-gray-400" />
+            </a>
           </div>
         </div>
 
-        {/* Action Button: Open Live BullMQ Dashboard */}
-        <div className="flex items-center space-x-2">
-          {onOpenQueueMonitor && (
-            <button
-              onClick={onOpenQueueMonitor}
-              className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold transition shadow-xs"
-              title="Open BullMQ Queue Monitor"
-            >
-              <Activity className="w-3 h-3" />
-              <span>Open BullMQ Dashboard</span>
-            </button>
-          )}
-          <a
-            href="/admin/queues"
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full bg-white hover:bg-gray-100 text-gray-700 border border-gray-200 text-[11px] font-medium transition shadow-2xs"
-            title="Open in new window"
-          >
-            <span>Fullscreen</span>
-            <ExternalLink className="w-3 h-3 text-gray-500" />
-          </a>
-        </div>
+        {/* In-Place Expandable Live BullMQ Dashboard */}
+        {isQueueExpanded && (
+          <div className="p-4 bg-white border-t border-gray-100 animate-in fade-in duration-200">
+            <div className="w-full h-[540px] rounded-xl border border-gray-200 overflow-hidden shadow-inner bg-gray-50">
+              <iframe
+                src="/admin/queues"
+                className="w-full h-full border-0"
+                title="Live BullMQ Queue Monitor"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Email Stream List matching Figma */}
@@ -201,12 +237,20 @@ export const InboxList: React.FC<InboxListProps> = ({
         ) : (
           emails.map((job) => {
             const dateObj = new Date(job.sentAt || job.scheduledAt);
-            const timeString = dateObj.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' });
-            const dayString = dateObj.toLocaleDateString([], { weekday: 'short' });
+            const timeString = dateObj.toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              minute: '2-digit',
+              second: '2-digit',
+              hour12: true,
+            });
+            const dayString = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
 
-            // Extract display name or email handle
+            // Extract & capitalize recipient name
             const recipientHandle = job.recipientEmail.split('@')[0].replace(/[._]/g, ' ');
-            const capitalizedName = recipientHandle.charAt(0).toUpperCase() + recipientHandle.slice(1);
+            const capitalizedName = recipientHandle
+              .split(' ')
+              .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+              .join(' ');
 
             return (
               <div
@@ -214,7 +258,7 @@ export const InboxList: React.FC<InboxListProps> = ({
                 onClick={() => onSelectEmail(job)}
                 className="group flex items-center justify-between px-6 py-3.5 hover:bg-[#F9FBFA] cursor-pointer transition text-xs select-none"
               >
-                {/* Left: Recipient */}
+                {/* Left: Recipient matching Figma */}
                 <div className="flex items-center space-x-4 min-w-[160px] max-w-[200px] shrink-0">
                   <span className="text-gray-900 font-medium truncate">
                     <strong className="font-semibold text-gray-800">To:</strong> {capitalizedName}
@@ -225,7 +269,7 @@ export const InboxList: React.FC<InboxListProps> = ({
                 <div className="flex-1 flex items-center space-x-3 overflow-hidden px-4">
                   {/* Figma Badge */}
                   {type === 'scheduled' ? (
-                    <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#FFF6ED] text-[#D97706] border border-[#FDE68A] shrink-0">
+                    <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#FFF6ED] text-[#D97706] border border-[#FDE68A] shrink-0">
                       <Clock className="w-3 h-3 text-[#D97706]" />
                       <span>{dayString} {timeString}</span>
                     </span>
@@ -237,8 +281,8 @@ export const InboxList: React.FC<InboxListProps> = ({
 
                   {/* Subject and Body Snippet matching Figma */}
                   <div className="truncate text-gray-500">
-                    <span className="font-semibold text-gray-800 mr-1.5">{job.subject}</span>
-                    <span className="text-gray-400">- {job.body}</span>
+                    <span className="font-bold text-gray-900 mr-1.5">{job.subject}</span>
+                    <span className="text-gray-400 font-normal">- {job.body}</span>
                   </div>
                 </div>
 
