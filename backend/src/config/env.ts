@@ -32,8 +32,8 @@ export const ENV = {
   },
 
   SCHEDULER: {
-    WORKER_CONCURRENCY: parseInt(process.env.WORKER_CONCURRENCY || '5', 10),
-    DELAY_BETWEEN_EMAILS_MS: parseInt(process.env.DELAY_BETWEEN_EMAILS_MS || '2000', 10),
+    WORKER_CONCURRENCY: parseInt(process.env.WORKER_CONCURRENCY || '10', 10),
+    DELAY_BETWEEN_EMAILS_MS: parseInt(process.env.DELAY_BETWEEN_EMAILS_MS || '250', 10),
     MAX_EMAILS_PER_HOUR: parseInt(process.env.MAX_EMAILS_PER_HOUR || '200', 10),
   },
 };

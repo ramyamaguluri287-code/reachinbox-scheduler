@@ -7,6 +7,15 @@ interface QueueMonitorViewProps {
 
 export const QueueMonitorView: React.FC<QueueMonitorViewProps> = ({ onClose }) => {
   const [iframeKey, setIframeKey] = useState(0);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+
+  React.useEffect(() => {
+    if (!autoRefresh) return;
+    const interval = setInterval(() => {
+      setIframeKey((prev) => prev + 1);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [autoRefresh]);
 
   const handleRefresh = () => {
     setIframeKey((prev) => prev + 1);
@@ -46,6 +55,20 @@ export const QueueMonitorView: React.FC<QueueMonitorViewProps> = ({ onClose }) =
 
         {/* Action Controls + Instant Close 'X' Mark */}
         <div className="flex items-center space-x-2">
+          {/* Auto-Refresh Toggle Pill */}
+          <button
+            onClick={() => setAutoRefresh(!autoRefresh)}
+            className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition border flex items-center space-x-1.5 ${
+              autoRefresh
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100'
+            }`}
+            title="Toggle Fast Auto-Refresh"
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${autoRefresh ? 'bg-emerald-500 animate-ping' : 'bg-gray-400'}`} />
+            <span>Fast Live {autoRefresh ? '3s' : 'OFF'}</span>
+          </button>
+
           <button
             onClick={handleRefresh}
             className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-gray-900 transition text-xs flex items-center space-x-1"

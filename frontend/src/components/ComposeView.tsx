@@ -134,6 +134,37 @@ export const ComposeView: React.FC<ComposeViewProps> = ({ user, onBack, onSchedu
     }
   };
 
+  const handleSendFast = async () => {
+    const validRecipients = recipients.filter((r) => r.trim() && r.includes('@'));
+    if (validRecipients.length === 0) {
+      setError('Please add at least one valid recipient email address.');
+      return;
+    }
+    if (!subject.trim()) {
+      setError('Please provide a subject line.');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      setError(null);
+      await onSchedule({
+        senderEmail: fromEmail,
+        recipientEmails: validRecipients,
+        subject,
+        body,
+        startTime: new Date().toISOString(),
+        delayBetweenEmailsMs: 100, // Ultra-fast execution
+        hourlyLimit: hourlyLimit || 200,
+      });
+      onBack();
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Failed to send campaign');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // Determine visible recipients with Figma "+N" badge
   const visibleRecipients = showAllTags ? recipients : recipients.slice(0, 3);
   const remainingCount = recipients.length - 3;
@@ -151,7 +182,7 @@ export const ComposeView: React.FC<ComposeViewProps> = ({ user, onBack, onSchedu
         </button>
 
         {/* Right Action Icons matching Figma */}
-        <div className="flex items-center space-x-3 relative">
+        <div className="flex items-center space-x-2.5 relative">
           {/* Paperclip with badge "1" */}
           <div className="relative cursor-pointer p-1.5 text-gray-400 hover:text-gray-600">
             <Paperclip className="w-4 h-4" />
@@ -166,6 +197,16 @@ export const ComposeView: React.FC<ComposeViewProps> = ({ user, onBack, onSchedu
             title="Schedule options"
           >
             <Clock className="w-4 h-4 text-[#00A859]" />
+          </button>
+
+          {/* Quick Instant Fast Send Button */}
+          <button
+            onClick={handleSendFast}
+            disabled={isSubmitting}
+            className="px-4 py-2 rounded-full bg-[#00A859] hover:bg-[#008f4c] text-white font-semibold text-xs tracking-wide transition flex items-center space-x-1 shadow-sm"
+            title="Execute queue job immediately with minimum latency"
+          >
+            <span>{isSubmitting ? 'Sending...' : '⚡ Send Fast'}</span>
           </button>
 
           {/* Primary "Send Later" Pill Button matching Figma */}
