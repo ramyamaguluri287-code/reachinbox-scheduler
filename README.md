@@ -637,39 +637,9 @@ Use this structured script when recording your submission video:
 
 ---
 
-## ⚖️ Assumptions, Shortcuts, and Trade-offs
+##
 
-### 1. Assumptions
-- **Redis & PostgreSQL Availability**: Assumed local or Dockerized instances of Redis (`:6379`) and PostgreSQL (`:5432`) are available.
-- **Hourly Window Boundaries**: Rate limit windows are calculated based on calendar-hour buckets (e.g. `10:00:00` to `11:00:00`). This ensures atomic key expiration in Redis and predictable rollover calculations.
-- **Sender Quota Defaults**: If no custom hourly limit is specified in the campaign payload, the system defaults to `200 emails/hour` with a `250ms` provider throttle delay.
 
-### 2. Shortcuts
-- **Automatic Ethereal Provisioning**: The backend automatically provisions a fake SMTP account on launch if credentials are not provided. This eliminates any manual account creation barrier for reviewers.
-- **One-Click Demo Authentication**: Alongside real Google OAuth, a **Demo Sign-in** button is provided on the login page so reviewers can evaluate the application immediately without needing Google Cloud Console credentials.
-- **Seed Script**: A pre-configured database seed (`npm run seed`) populates initial sample campaigns matching the ReachInbox Figma screens.
-
-### 3. Trade-offs
-- **Single-Origin Reverse Proxy**: Rather than forcing the evaluator to navigate to separate ports (`:5000` for backend/Bull-Board and `:3000` for frontend), Next.js App Router reverse-proxies `/admin/queues` directly on port `3000`. This satisfies the single URL requirement with zero CORS issues.
-- **Auto-Rescheduling vs. Job Failure**: When an hourly rate limit is hit, jobs are **rescheduled to the next hour window** rather than marked as `FAILED`. *Trade-off*: Dispatches are delayed until the next window, but zero campaigns or leads are dropped.
-- **Redis Sorted Sets vs. Cron Polling**: BullMQ delayed jobs are held in Redis sorted sets indexed by timestamp. *Trade-off*: Requires Redis persistence (AOF/RDB) to survive crashes, but provides sub-millisecond precision and zero database polling overhead compared to traditional cron jobs.
-
----
-
-## 📦 Submission Checklist
-
-- [x] **Private GitHub Repository created**
-- [x] **Collaborator access granted to**:
-  - `Mitrajit`
-  - `Yadav036`
-- [x] **Comprehensive README documentation included**:
-  - Backend and frontend instructions
-  - Ethereal Email setup & environment variables
-  - Architecture breakdown (Zero-cron, persistence, rate limiting, concurrency)
-  - Features implemented mapping table
-  - Assumptions, shortcuts, and trade-offs
-- [x] **Submission form completed**:
-  - [ClickUp Submission Form](https://forms.clickup.com/9005062261/f/8cbwp3n-8876/6NNNJ92DV93PQTAYST)
 
 ---
 
