@@ -31,7 +31,6 @@ A resilient, scalable email scheduler and management dashboard engineered for hi
 8. [Automated Constraints Test Suite](#-automated-constraints-test-suite)
 9. [Figma UI Parity & Design Implementation](#-figma-ui-parity--design-implementation)
 10. [Step-by-Step Resilience Testing Guide](#-step-by-step-resilience-testing-guide)
-11. [5-Minute Demo Video Walkthrough Script](#-5-minute-demo-video-walkthrough-script)
 
 ---
 
