@@ -203,6 +203,10 @@ export default function DashboardPage() {
             setSelectedEmail(email);
             setCurrentView('detail');
           }}
+          onOpenQueueMonitor={() => setActiveTab('queues')}
+          onConnectSlack={handleConnectSlack}
+          onDisconnectSlack={handleDisconnectSlack}
+          onSendTestSlack={handleSendTestSlack}
         />
       )}
     </div>

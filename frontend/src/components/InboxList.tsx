@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { User, EmailJob } from '../types';
-import { Search, SlidersHorizontal, RefreshCw, Star, Clock, Send, ExternalLink, LogOut } from 'lucide-react';
+import { Search, SlidersHorizontal, RefreshCw, Star, Clock, Send, ExternalLink, LogOut, Activity, Slack, CheckCircle2 } from 'lucide-react';
 
 interface InboxListProps {
   emails: EmailJob[];
@@ -14,6 +14,10 @@ interface InboxListProps {
   user?: User | null;
   onLogout?: () => void;
   onSelectEmail: (email: EmailJob) => void;
+  onOpenQueueMonitor?: () => void;
+  onConnectSlack?: () => void;
+  onDisconnectSlack?: () => void;
+  onSendTestSlack?: () => void;
 }
 
 export const InboxList: React.FC<InboxListProps> = ({
@@ -26,13 +30,17 @@ export const InboxList: React.FC<InboxListProps> = ({
   user,
   onLogout,
   onSelectEmail,
+  onOpenQueueMonitor,
+  onConnectSlack,
+  onDisconnectSlack,
+  onSendTestSlack,
 }) => {
   return (
     <div className="flex-1 flex flex-col h-screen overflow-hidden bg-white">
       {/* Top Search & Filter Bar matching Figma with User Profile Header */}
-      <div className="px-6 py-3.5 border-b border-gray-100 flex items-center justify-between gap-4 shrink-0">
+      <div className="px-6 py-3.5 border-b border-gray-100 flex items-center justify-between gap-3 shrink-0">
         {/* Search Input matching Figma */}
-        <div className="relative flex-1 max-w-lg">
+        <div className="relative flex-1 max-w-md">
           <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
@@ -44,7 +52,43 @@ export const InboxList: React.FC<InboxListProps> = ({
         </div>
 
         {/* Action icons & User Profile in Top Header */}
-        <div className="flex items-center space-x-2.5 text-gray-400">
+        <div className="flex items-center space-x-2 text-gray-500">
+          {/* Top BullMQ Dashboard Button */}
+          {onOpenQueueMonitor && (
+            <button
+              onClick={onOpenQueueMonitor}
+              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-semibold transition shadow-2xs"
+              title="Open BullMQ Queue Dashboard"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>BullMQ Board</span>
+              <ExternalLink className="w-3 h-3 text-emerald-600" />
+            </button>
+          )}
+
+          {/* Top Slack Button */}
+          {user?.isSlackConnected ? (
+            <div className="hidden lg:inline-flex items-center space-x-1 px-2.5 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full text-[11px] font-semibold">
+              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+              <span>Slack Active</span>
+              {onSendTestSlack && (
+                <button onClick={onSendTestSlack} className="underline text-[10px] ml-1 font-bold">
+                  Test
+                </button>
+              )}
+            </div>
+          ) : (
+            onConnectSlack && (
+              <button
+                onClick={onConnectSlack}
+                className="hidden lg:inline-flex items-center space-x-1 px-2.5 py-1 bg-gray-900 hover:bg-gray-800 text-white rounded-full text-[11px] font-medium transition"
+              >
+                <Slack className="w-3 h-3" />
+                <span>Slack</span>
+              </button>
+            )
+          )}
+
           <button
             onClick={onRefresh}
             className="p-1.5 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition"
@@ -61,7 +105,7 @@ export const InboxList: React.FC<InboxListProps> = ({
 
           {/* User Profile in Top Header: Name, Email, Avatar, and Logout */}
           {user && (
-            <div className="flex items-center space-x-2.5 pl-3 border-l border-gray-100">
+            <div className="flex items-center space-x-2.5 pl-2.5 border-l border-gray-100">
               <img
                 src={user.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100'}
                 alt={user.name || 'User Avatar'}
@@ -79,7 +123,7 @@ export const InboxList: React.FC<InboxListProps> = ({
               {onLogout && (
                 <button
                   onClick={onLogout}
-                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition ml-1 flex items-center space-x-1"
+                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition ml-0.5 flex items-center space-x-1"
                   title="Logout"
                 >
                   <LogOut className="w-3.5 h-3.5" />
@@ -88,6 +132,48 @@ export const InboxList: React.FC<InboxListProps> = ({
               )}
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Schedule Top Header: BullMQ Dashboard & Queue Status */}
+      <div className="px-6 py-3 bg-[#F8FAF9] border-b border-gray-100 flex items-center justify-between shrink-0">
+        <div className="flex items-center space-x-2.5">
+          <div className="w-7 h-7 rounded-lg bg-[#EAF8F1] text-[#00A859] flex items-center justify-center shrink-0 shadow-2xs">
+            <Activity className="w-3.5 h-3.5" />
+          </div>
+          <div className="flex items-center space-x-2">
+            <h3 className="text-xs font-bold text-gray-900 tracking-tight">
+              {type === 'scheduled' ? 'Scheduled Emails' : 'Sent Emails'}
+            </h3>
+            <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span>BullMQ Engine: {emails.length} Jobs</span>
+            </span>
+          </div>
+        </div>
+
+        {/* Action Button: Open Live BullMQ Dashboard */}
+        <div className="flex items-center space-x-2">
+          {onOpenQueueMonitor && (
+            <button
+              onClick={onOpenQueueMonitor}
+              className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold transition shadow-xs"
+              title="Open BullMQ Queue Monitor"
+            >
+              <Activity className="w-3 h-3" />
+              <span>Open BullMQ Dashboard</span>
+            </button>
+          )}
+          <a
+            href="/admin/queues"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full bg-white hover:bg-gray-100 text-gray-700 border border-gray-200 text-[11px] font-medium transition shadow-2xs"
+            title="Open in new window"
+          >
+            <span>Fullscreen</span>
+            <ExternalLink className="w-3 h-3 text-gray-500" />
+          </a>
         </div>
       </div>
 
