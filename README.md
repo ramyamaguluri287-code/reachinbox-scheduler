@@ -1,304 +1,597 @@
 # 🚀 ReachInbox — Production-Grade Full-Stack Email Job Scheduler
 
-A resilient, scalable email scheduler and management dashboard engineered for high-throughput cold email campaigns. Built with **TypeScript**, **Express.js**, **BullMQ**, **Redis**, **PostgreSQL**, **Elasticsearch**, and **React**.
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue.svg?logo=typescript)](https://www.typescriptlang.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-14.2%20(App%20Router)-black.svg?logo=next.js)](https://nextjs.org/)
+[![Express.js](https://img.shields.io/badge/Express-4.19-lightgrey.svg?logo=express)](https://expressjs.com/)
+[![BullMQ](https://img.shields.io/badge/BullMQ-5.7-red.svg?logo=redis)](https://bullmq.io/)
+[![Redis](https://img.shields.io/badge/Redis-7.x%20(AOF)-dc382d.svg?logo=redis)](https://redis.io/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16%2F17-336791.svg?logo=postgresql)](https://www.postgresql.org/)
+[![Prisma](https://img.shields.io/badge/Prisma-5.14-2d3748.svg?logo=prisma)](https://www.prisma.io/)
+[![TailwindCSS](https://img.shields.io/badge/Tailwind-3.4-38bdf8.svg?logo=tailwindcss)](https://tailwindcss.com/)
 
----
-
-## 🎯 Problem Statement & Tech Requirements
-
-### Problem Statement
-At ReachInbox, a huge part of our system is **reliable scheduling and sending of emails at scale**.
-This repository delivers a **production-grade email scheduler service + dashboard** that:
-- ✅ Accepts **email send requests** via APIs
-- ✅ Schedules them to be sent at a **specific time**
-- ✅ Uses **BullMQ + Redis** as a persistent job scheduler (**no cron jobs**)
-- ✅ Sends emails using fake SMTP via **Ethereal Email**
-- ✅ Survives **server restarts** without restarting from scratch or losing jobs
-- ✅ Exposes a **frontend dashboard** to:
-  - Schedule new emails (with "Send Later" calendar presets & "⚡ Send Fast")
-  - View scheduled emails (matching Figma pixel-for-pixel)
-  - View sent emails (with live Ethereal web preview links)
-
-### 🧪 Tech Requirements Compliance
-
-| Area | Requirement | Our Implementation | Verified |
-| :--- | :--- | :--- | :---: |
-| **Backend Language** | **TypeScript** | Strict TypeScript (`v5.4.5`) compiling cleanly to `dist/` | ✅ Yes |
-| **Backend Framework** | **Express.js** | Express (`v4.19.2`) with dual listeners (ports `5000` & `4000`) | ✅ Yes |
-| **Queue** | **BullMQ** + **Redis** | BullMQ (`v5.7.14`) backed by Redis with persistent delayed sets | ✅ Yes |
-| **Database** | **PostgreSQL** or MySQL | PostgreSQL 16/17 with Prisma ORM (`v5.14.0`) & relational schema | ✅ Yes |
-| **SMTP** | **Ethereal Email** | Nodemailer with automatic Ethereal SMTP & live preview links | ✅ Yes |
-| **Frontend Framework** | **Next.js 14** (App Router) | Next.js 14.2 App Router (`/app/login`, `/app/dashboard`) + `@react-oauth/google` | ✅ Yes |
-| **Frontend Styling** | **Tailwind CSS** + **shadcn/ui** | Tailwind CSS (`v3.4.3`) matching Figma screens pixel-for-pixel | ✅ Yes |
-| **Frontend Language** | **TypeScript** | Strict TypeScript (`no any`) throughout all components, types, and hooks | ✅ Yes |
-| **Infrastructure** | **Docker** (recommended) | Docker Compose with PostgreSQL 16, Redis 7 (AOF), Elasticsearch | ✅ Yes |
+A resilient, scalable email scheduler and management dashboard engineered for high-throughput cold email campaigns. Built with strict adherence to zero-cron BullMQ delayed job queues, atomic Redis rate limiting, persistent PostgreSQL state management, and an exact Figma-matched user interface.
 
 ---
 
 ## 📑 Table of Contents
-1. [Problem Statement & Tech Requirements](#-problem-statement--tech-requirements)
-2. [Architecture Overview](#-architecture-overview)
-3. [Key Engineering Highlights](#-key-engineering-highlights)
-4. [Prerequisites & Quick Setup on Windows](#-prerequisites--quick-setup-on-windows)
-5. [Step-by-Step Running Guide](#-step-by-step-running-guide)
-6. [Feature Mapping](#-feature-mapping)
-7. [Resilience & Restart Persistence Testing](#-resilience--restart-persistence-testing)
-8. [Rate Limiting & Slack Alerting Logic](#-rate-limiting--slack-alerting-logic)
-9. [5-Minute Demo Video Walkthrough Script](#-5-minute-demo-video-walkthrough-script)
+
+1. [System Architecture & Single URL Design](#-system-architecture--single-url-design)
+2. [Hard Constraints & Engineering Verification](#-hard-constraints--engineering-verification)
+3. [Prerequisites & Environment Configuration](#-prerequisites--environment-configuration)
+4. [Quickstart Guide](#-quickstart-guide)
+5. [Database Schema (Prisma & PostgreSQL)](#-database-schema-prisma--postgresql)
+6. [Complete REST API Specification](#-complete-rest-api-specification)
+7. [In-Depth Feature Breakdown](#-in-depth-feature-breakdown)
+   - [Zero-Cron Delayed Scheduling](#1-zero-cron-delayed-scheduling)
+   - [Server Restart Persistence & Recovery](#2-server-restart-persistence--recovery)
+   - [Sliding-Window Hourly Rate Limiting](#3-sliding-window-hourly-rate-limiting)
+   - [Real-Time Slack Alerting](#4-real-time-slack-alerting)
+   - [High-Throughput Load Handling (1,000+ Emails)](#5-high-throughput-load-handling-1000-emails)
+   - [Full-Text Search (Elasticsearch + DB Fallback)](#6-full-text-search-elasticsearch--db-fallback)
+8. [Automated Constraints Test Suite](#-automated-constraints-test-suite)
+9. [Figma UI Parity & Design Implementation](#-figma-ui-parity--design-implementation)
+10. [Step-by-Step Resilience Testing Guide](#-step-by-step-resilience-testing-guide)
+11. [5-Minute Demo Video Walkthrough Script](#-5-minute-demo-video-walkthrough-script)
 
 ---
 
-## 🏛 Architecture Overview
+## 🏛 System Architecture & Single URL Design
+
+### All-in-One Single URL Access
+
+Everything is served and proxied through **`http://localhost:3000`** without requiring external browser tabs or jumping across ports:
+
+| View / Function | Access Path | Description |
+| :--- | :--- | :--- |
+| **Main Dashboard & App** | `http://localhost:3000` | Full UI: Authentication, Email Composer, Scheduled & Sent Streams |
+| **In-Place BullMQ Monitor** | `http://localhost:3000` | Click **`⚡ BullMQ Dashboard`** on the schedule header to expand the board inline |
+| **Dedicated Queue View** | `http://localhost:3000` | Click **`Queue Monitor`** on the left sidebar navigation |
+| **Bull-Board Reverse Proxy** | `http://localhost:3000/admin/queues` | Proxied directly through the frontend Next.js rewrite engine |
+| **Direct Backend Bull-Board** | `http://localhost:5000/admin/queues` | Direct Express listener endpoint |
 
 ```mermaid
 flowchart TD
-    subgraph Frontend ["Frontend (React + Vite + Tailwind CSS)"]
+    subgraph Browser ["Client Interface (http://localhost:3000)"]
         UI[Main Dashboard]
         Login[Google OAuth & Demo Auth]
-        Compose[Compose Modal & CSV Parser]
-        SearchUI[Elasticsearch Search Bar]
+        Composer[Compose Modal & CSV Parser]
+        Inbox[Scheduled & Sent Email Streams]
+        QueueEmbed[Embedded BullMQ Board Iframe]
     end
 
-    subgraph Backend ["Backend API (Express.js + TypeScript)"]
+    subgraph ReverseProxy ["Next.js Reverse Proxy"]
+        AppRoute["/ -> Render Dashboard"]
+        AdminProxy["/admin/queues -> Proxy to :5000/admin/queues"]
+    end
+
+    subgraph BackendAPI ["Express.js API (:5000 / :4000)"]
         AuthCtrl[Auth Controller]
         EmailCtrl[Email Controller]
-        SlackCtrl[Slack OAuth Controller]
-        BullBoard[Bull-Board Live Queue UI]
+        SlackCtrl[Slack Controller]
+        BullAdmin[Bull-Board UI Engine]
     end
 
     subgraph Storage ["Persistent Infrastructure"]
-        Postgres[(PostgreSQL via Prisma)]
-        Redis[(Redis 7)]
-        ES[(Elasticsearch 8)]
+        Postgres[(PostgreSQL 16 via Prisma)]
+        Redis[(Redis 7 AOF Persistence)]
+        ES[(Elasticsearch 8 / DB Fallback)]
     end
 
-    subgraph Engine ["BullMQ & Background Workers"]
-        Queue[BullMQ Delayed Queue]
-        Worker[BullMQ Worker - Configurable Concurrency]
-        RL[Redis Rate Limiter & Throttler]
-        SlackService[Slack Alert Webhook / API]
+    subgraph QueueEngine ["BullMQ Job Engine"]
+        DelayedSet[Redis Sorted Set - bull:email-sending-queue:delayed]
+        WorkerPool[10-Worker Concurrent Consumer Pool]
+        Throttler[250ms Provider Throttler]
+        RateLimiter[Atomic Sliding-Window Rate Limiter]
         Ethereal[Ethereal Fake SMTP Transporter]
+        SlackAlert[Slack Web API Client]
     end
 
-    UI -->|Google ID Token| AuthCtrl
-    Compose -->|Schedule Payload + CSV Leads| EmailCtrl
-    EmailCtrl -->|Save Email State| Postgres
-    EmailCtrl -->|Add Delayed Job with idempotency key| Queue
-    EmailCtrl -->|Index Email Metadata| ES
-    SearchUI -->|Full-Text Search| ES
+    UI --> AppRoute
+    QueueEmbed --> AdminProxy
+    AdminProxy --> BullAdmin
 
-    Queue -->|Persistent Delayed Set| Redis
-    Redis -->|Dispatch Due Jobs| Worker
-    Worker -->|Check Rate Limit Window| RL
-    RL -->|Hourly Limit Exceeded| SlackService
-    RL -->|Reschedule Overflow Job| Queue
-    Worker -->|Send via Fake SMTP| Ethereal
-    Worker -->|Update Status: SENT + Preview URL| Postgres
-    Worker -->|Update Status: SENT| ES
+    Login --> AuthCtrl
+    Composer --> EmailCtrl
+    EmailCtrl -->|1. Create Record| Postgres
+    EmailCtrl -->|2. Enqueue Job with jobId=emailId| DelayedSet
+    EmailCtrl -->|3. Index Metadata| ES
+
+    DelayedSet -->|Deliver When Timestamp Reached| WorkerPool
+    WorkerPool --> Throttler
+    WorkerPool --> RateLimiter
+    RateLimiter -->|Under Limit| Ethereal
+    RateLimiter -->|Limit Exceeded| SlackAlert
+    RateLimiter -->|Limit Exceeded| DelayedSet
+    Ethereal -->|Update Status: SENT + Preview URL| Postgres
 ```
 
 ---
 
-## ⚡ Key Engineering Highlights
+## 🧪 Hard Constraints & Engineering Verification
 
-### 1. Zero-Cron BullMQ Delayed Scheduling
-- **No cron jobs**, no OS-level `crontab`, no `node-cron` or `agenda`.
-- Email scheduling utilizes BullMQ's native delayed job mechanism.
-- Jobs are stored in Redis Sorted Sets (`bull:email-sending-queue:delayed`) indexed by the target execution timestamp.
-- **Idempotency Guarantee**: Every BullMQ job is keyed with `jobId = emailId` (UUID). Even if a request is retried or the scheduler processes a duplicate batch, duplicate emails can never be queued.
-
-### 2. Complete Server Restart Persistence
-- When the backend or worker crashes or restarts:
-  1. Redis retains all delayed and waiting jobs with their exact millisecond dispatch timestamps.
-  2. PostgreSQL maintains the persistent source of truth (`SCHEDULED`, `PROCESSING`, `SENT`, `RESCHEDULED`, `FAILED`).
-  3. When the service boots back up, BullMQ resumes processing without losing jobs or restarting existing schedules from Day 1.
-  4. The worker checks DB state before sending (`existingEmail.status === 'SENT'`), preventing duplicate sends.
-
-### 3. Rate Limiting & Overflow Rescheduling
-- **Per-Sender Hourly Limit** (`MAX_EMAILS_PER_HOUR`, e.g., 200 emails/hr or customizable per campaign).
-- Counters are stored atomically in Redis using time-windowed keys:
-  ```
-  rl:sender:<senderEmail>:<hourWindowTimestamp>
-  ```
-- **Overflow Resilience**: When a sender hits their hourly quota:
-  - Jobs are **NEVER dropped or failed**.
-  - Remaining jobs are safely calculated and rescheduled to the start of the next hour window.
-  - Job status in PostgreSQL is marked as `RESCHEDULED`.
-
-### 4. Live Slack Notification on Rate Limit Hit
-- Includes real Slack OAuth 2.0 authorization flow (`/api/slack/authorize` & `/api/slack/callback`).
-- The moment a sender hits the hourly threshold, an alert card is delivered to the user's connected Slack channel.
-- Protected by Redis alert de-duplication so Slack is notified once per hourly window rather than flooded.
-- **Graceful degradation**: If Slack is not connected, the scheduler operates silently without crashing.
-
-### 5. Behavior Under Load (1000+ Emails Simulation)
-When a large campaign of **1,000+ emails** is scheduled for roughly the same time:
-1. **Staggered Ingestion**: The API stores the batch into PostgreSQL and computes individual dispatch timestamps staggered by `DELAY_BETWEEN_EMAILS_MS` (e.g. 250ms).
-2. **Redis Memory Efficiency**: BullMQ enqueues all 1,000 jobs into the Redis Sorted Set (`zset`) in milliseconds ($O(\log N)$ insertion), requiring less than 2 MB of Redis memory.
-3. **Parallel Concurrency**: 10 worker threads consume jobs in parallel without lock contention.
-4. **Rate Limit Throttling**:
-   - The first 200 emails (per sender quota) are delivered normally.
-   - On the 201st email, the Redis atomic counter (`INCR rl:sender:<sender>:<window>`) exceeds `MAX_EMAILS_PER_HOUR`.
-   - **Zero Jobs Lost**: Jobs 201 through 1,000 are **NOT failed or dropped**; they are automatically rescheduled into the next hour window (`nextHourStart = currentHour + 1 hr`) with status `RESCHEDULED`.
-   - **Live Slack Alert**: A Slack notification is dispatched once on the first quota hit in that window.
-5. **Order Preservation**: The relative delay and sequence between recipients are preserved across subsequent hour buckets.
-
-### 6. Elasticsearch Indexing & Full-Text Search
-- Emails are indexed into Elasticsearch (`reachinbox_emails`) at creation and upon delivery.
-- Full-text search across recipients, subjects, senders, and body content.
-- Graceful database fallback if Elasticsearch is offline.
-
-### 7. Live BullMQ Visibility
-- Live Bull-Board dashboard integrated at `http://localhost:5000/admin/queues` allowing visual inspection of active, delayed, completed, and failed jobs.
+| Constraint | Requirement | Implementation | Status |
+| :--- | :--- | :--- | :---: |
+| **Zero Cron Jobs** | ❌ No `node-cron`, `agenda`, OS `cron` | Delayed jobs stored in Redis sorted sets via `emailQueue.add(name, data, { delay, jobId })` | ✅ Verified |
+| **Strict Idempotency** | Prevent duplicate sends under any retries | Every BullMQ job is keyed with `jobId = email.id` (UUID). Worker performs DB check before dispatch | ✅ Verified |
+| **Restart Resilience** | Zero jobs lost when backend restarts | Redis delayed set preserves timestamps; on startup, `reconcilePendingJobs()` synchronizes state | ✅ Verified |
+| **Worker Concurrency** | Configurable worker pool (10 workers) | BullMQ Worker initialized with `{ concurrency: 10 }` | ✅ Verified |
+| **Provider Throttling** | Minimum delay between dispatches | Enforces `DELAY_BETWEEN_EMAILS_MS` (default `250ms`) sleep delay between individual dispatches | ✅ Verified |
+| **Sliding-Window Limiter** | Max sends per sender per hour | Atomic Redis window counters (`rl:sender:<email>:<window>`). Overflow automatically rescheduled | ✅ Verified |
+| **Real-Time Slack Alert** | Alert sent when rate limit is exceeded | Authenticated Slack OAuth 2.0 + Web API notification with rate-limit deduplication | ✅ Verified |
+| **Fake SMTP Delivery** | Live inspectable email previews | Nodemailer configured with Ethereal SMTP generating active web preview URLs | ✅ Verified |
+| **Single Origin / Port** | Unified URL access | Reverse proxy rewrites `/admin/queues` directly to the Bull-Board engine under `http://localhost:3000` | ✅ Verified |
 
 ---
 
-## 🛠 Prerequisites & Quick Setup on Windows
+## 🛠 Prerequisites & Environment Configuration
 
-### 1. Install Node.js
-If not already installed on Windows:
-- Download the installer (LTS version) from [nodejs.org](https://nodejs.org) or install via PowerShell:
-  ```powershell
-  winget install OpenJS.NodeJS.LTS
-  ```
-- Verify in a new terminal:
-  ```powershell
-  node -v
-  npm -v
-  ```
+### 1. Requirements
+- **Node.js**: `v18.x` or `v20.x` LTS
+- **Package Manager**: `npm` (included with Node.js)
+- **Database**: PostgreSQL (`v14` or newer)
+- **Cache/Queue**: Redis (`v6.x` or `v7.x` with persistence enabled)
+- **Optional**: Docker & Docker Compose (for single-command infrastructure setup)
 
-### 2. Infrastructure Options (Docker vs Free Cloud Services)
+### 2. Environment Variables
 
-#### Option A: Docker Desktop (Recommended)
-Make sure Docker Desktop is installed and running, then start the services:
-```powershell
-docker compose up -d
+#### Backend Configuration (`backend/.env`)
+```ini
+# Server Configuration
+PORT=5000
+NODE_ENV=development
+FRONTEND_URL=http://localhost:3000
+
+# PostgreSQL (Prisma ORM)
+DATABASE_URL="postgresql://reachinbox:reachinbox_password@localhost:5432/reachinbox_scheduler?schema=public"
+
+# Redis (BullMQ & Rate Limiting)
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+
+# Elasticsearch (Optional - falls back to PostgreSQL if unavailable)
+ELASTICSEARCH_NODE=http://localhost:9200
+ELASTICSEARCH_INDEX=reachinbox_emails
+
+# Security & Authentication
+JWT_SECRET="super-secret-reachinbox-jwt-key-321"
+
+# Google OAuth Credentials (console.cloud.google.com)
+GOOGLE_CLIENT_ID="your-google-client-id.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET="your-google-client-secret"
+
+# Slack OAuth Integration (api.slack.com/apps)
+SLACK_CLIENT_ID="your-slack-client-id"
+SLACK_CLIENT_SECRET="your-slack-client-secret"
+SLACK_REDIRECT_URI="http://localhost:5000/api/slack/callback"
+
+# Performance & Rate Limiting Tuning
+WORKER_CONCURRENCY=10
+DELAY_BETWEEN_EMAILS_MS=250
+MAX_EMAILS_PER_HOUR=200
+
+# Ethereal SMTP (Leave blank to automatically provision test accounts on launch)
+ETHEREAL_USER=
+ETHEREAL_PASS=
 ```
-This spins up:
-- PostgreSQL on `localhost:5432`
-- Redis on `localhost:6379`
-- Elasticsearch on `localhost:9200`
 
-#### Option B: Cloud Services (If Docker is not installed)
-You can plug in free cloud instances into `backend/.env`:
-- **PostgreSQL**: [Neon.tech](https://neon.tech) or [Supabase.com](https://supabase.com)
-- **Redis**: [Upstash.com](https://upstash.com)
-- **Elasticsearch**: [Elastic Cloud](https://cloud.elastic.co) or the system will automatically fall back to PostgreSQL database search.
+#### Frontend Configuration (`frontend/.env`)
+```ini
+NEXT_PUBLIC_API_URL=http://localhost:5000
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+```
 
 ---
 
-## 🚀 Monorepo Quickstart (Single Repository)
+## 🚀 Quickstart Guide
 
-Everything is unified into a single repository. You can run both the backend and frontend together with a single command:
+### Option A: Using Docker for Infrastructure (Recommended)
+
+1. **Start Database and Redis via Docker Compose**:
+   ```bash
+   docker compose up -d
+   ```
+   *Spins up PostgreSQL 16 on `:5432`, Redis 7 on `:6379`, and Elasticsearch 8 on `:9200`.*
+
+2. **Install All Dependencies & Prepare Database**:
+   ```bash
+   npm install
+   npm run install:all
+   npm run prisma:push
+   npm run seed
+   ```
+
+3. **Start the Unified Monorepo (Single Command)**:
+   ```bash
+   npm run dev
+   ```
+   *Concurrently launches the Express backend on `:5000` and the Next.js frontend on `:3000`.*
+
+4. **Open the Application**:
+   Navigate to **`http://localhost:3000`** in your browser.
+
+---
+
+### Option B: Local / Windows Native Setup
+
+If running native services on Windows without Docker:
 
 ```powershell
-# 1. Install root, backend, and frontend dependencies
-npm install
-npm run install:all
+# 1. Start local Redis
+& "redis-server.exe" --port 6379
 
-# 2. Sync database schema & seed Figma sample data
+# 2. In repository root, push Prisma schema to PostgreSQL
 npm run prisma:push
 npm run seed
 
-# 3. Start Backend & Frontend concurrently with one command!
+# 3. Start development servers
 npm run dev
 ```
-
-This concurrently boots:
-- 🚀 **Backend API & Queue Worker**: `http://localhost:5000` (also listening on `http://localhost:4000`)
-- 📊 **Bull-Board Live Monitor**: `http://localhost:5000/admin/queues`
-- 🖥️ **Next.js 14 Frontend Dashboard**: `http://localhost:3000`
 
 ---
 
-### Alternative: Individual Service Control
+## 🗄 Database Schema (Prisma & PostgreSQL)
 
-If you prefer running services in separate terminals:
+```mermaid
+erDiagram
+    User ||--o{ EmailJob : "owns"
+    User ||--o| SlackConfig : "has"
 
-#### Terminal 1 (Backend API & Worker):
-```powershell
-cd backend
-npm install
-npx prisma db push
-npm run dev
+    User {
+        string id PK
+        string googleId UK
+        string email UK
+        string name
+        string avatar
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    EmailJob {
+        string id PK
+        string bullJobId UK
+        string userId FK
+        string senderEmail
+        string recipientEmail
+        string subject
+        string body
+        datetime scheduledAt
+        datetime sentAt
+        string status "SCHEDULED | PROCESSING | SENT | FAILED | RESCHEDULED"
+        string etherealPreviewUrl
+        string errorMessage
+        int retryCount
+        datetime createdAt
+        datetime updatedAt
+    }
+
+    SlackConfig {
+        string id PK
+        string userId FK
+        string accessToken
+        string channelId
+        string channelName
+        string teamName
+        datetime connectedAt
+    }
 ```
 
-#### Terminal 2 (Next.js 14 Frontend UI):
-```powershell
-cd frontend
-npm install
-npm run dev
-```
-Open your browser at `http://localhost:3000`.
+### Table Indexing Strategy
+- **`EmailJob([userId, status])`**: Optimizes tab querying for Scheduled vs Sent streams.
+- **`EmailJob([scheduledAt])`**: Speeds up timestamp range queries for scheduling reconciliation.
+- **`EmailJob([senderEmail])`**: Provides fast lookup for sender rate limit evaluations.
 
 ---
 
-### 🧪 Automated Constraint Verification Test
+## 🔌 Complete REST API Specification
 
-To verify zero-cron BullMQ delayed scheduling, DB persistence, and idempotency:
-```powershell
+### Authentication
+
+#### `POST /api/auth/google`
+Authenticates a user via Google ID Token or Demo token.
+- **Request Body**:
+  ```json
+  { "credential": "google_id_token_or_demo_keyword" }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "id": "c5ca0a76-c9e6-4ded-b2e9-bb3876792004",
+      "email": "oliver.brown@domain.io",
+      "name": "Oliver Brown",
+      "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100",
+      "isSlackConnected": false
+    }
+  }
+  ```
+
+#### `GET /api/auth/me`
+Retrieves the profile and Slack connection status of the authenticated user.
+- **Headers**: `Authorization: Bearer <token>`
+- **Response `200 OK`**: User profile object.
+
+---
+
+### Email Scheduling & Management
+
+#### `POST /api/emails/schedule`
+Enqueues a campaign with one or more recipients with staggered delays and custom hourly limits.
+- **Headers**: `Authorization: Bearer <token>`
+- **Request Body**:
+  ```json
+  {
+    "senderEmail": "oliver.brown@domain.io",
+    "recipientEmails": [
+      "lead1@company.com",
+      "lead2@company.com",
+      "lead3@company.com"
+    ],
+    "subject": "Quick question regarding your growth strategy",
+    "body": "Hi there,\n\nWanted to connect and discuss how we can accelerate your outbound pipeline.",
+    "startTime": "2026-10-09T08:00:00.000Z",
+    "delayBetweenEmailsMs": 250,
+    "hourlyLimit": 200
+  }
+  ```
+- **Response `201 Created`**:
+  ```json
+  {
+    "message": "Successfully scheduled 3 email(s)",
+    "count": 3,
+    "jobs": [
+      {
+        "id": "e44d32a0-405a-4cb7-8278-8314ba6cfbf2",
+        "recipient": "lead1@company.com",
+        "scheduledAt": "2026-10-09T08:00:00.000Z"
+      },
+      {
+        "id": "52857e4e-bfd1-4ba2-bf4f-eef41f3ec6a4",
+        "recipient": "lead2@company.com",
+        "scheduledAt": "2026-10-09T08:00:00.250Z"
+      },
+      {
+        "id": "3bb2be1d-8f4b-4836-96b6-39f201083bb7",
+        "recipient": "lead3@company.com",
+        "scheduledAt": "2026-10-09T08:00:00.500Z"
+      }
+    ]
+  }
+  ```
+
+#### `GET /api/emails/scheduled`
+Retrieves all pending or currently processing scheduled jobs for the user.
+- **Headers**: `Authorization: Bearer <token>`
+- **Response `200 OK`**: Array of `EmailJob` objects ordered by `scheduledAt ASC`.
+
+#### `GET /api/emails/sent`
+Retrieves all sent and delivered emails for the user.
+- **Headers**: `Authorization: Bearer <token>`
+- **Response `200 OK`**: Array of `EmailJob` objects ordered by `sentAt DESC`, including `etherealPreviewUrl`.
+
+#### `GET /api/emails/search?q=:query&tab=:tab`
+Performs a full-text search across recipients, senders, subjects, and body text using Elasticsearch (with transparent PostgreSQL fallback).
+- **Parameters**:
+  - `q`: Search keyword
+  - `tab`: Filter by `all`, `scheduled`, or `sent`
+- **Response `200 OK`**:
+  ```json
+  {
+    "results": [ ... ],
+    "total": 1,
+    "source": "elasticsearch"
+  }
+  ```
+
+---
+
+### Slack Integration
+
+#### `GET /api/slack/authorize`
+Generates the Slack OAuth 2.0 authorization redirect URL.
+- **Headers**: `Authorization: Bearer <token>`
+- **Response `200 OK`**: `{ "url": "https://slack.com/oauth/v2/authorize?..." }`
+
+#### `POST /api/slack/disconnect`
+Unlinks the user's Slack account and removes webhook/channel credentials.
+- **Headers**: `Authorization: Bearer <token>`
+- **Response `200 OK`**: `{ "message": "Slack disconnected successfully" }`
+
+#### `POST /api/slack/test`
+Triggers an immediate test alert to the user's connected Slack channel to verify webhook/bot delivery.
+- **Headers**: `Authorization: Bearer <token>`
+- **Response `200 OK`**: `{ "message": "Test alert sent to Slack" }`
+
+---
+
+## ⚡ In-Depth Feature Breakdown
+
+### 1. Zero-Cron Delayed Scheduling
+Standard implementations often poll databases using periodic cron jobs (`every minute check DB`). This introduces high database overhead, lock contention, and dispatch jitter. 
+
+Our architecture operates with **zero cron dependencies**:
+1. When an email is scheduled for $T_{target}$, BullMQ calculates:
+   $$\text{delay} = \max(0, T_{target} - T_{now})$$
+2. The job is enqueued directly into Redis Sorted Sets:
+   ```
+   bull:email-sending-queue:delayed
+   ```
+   where the sorted set **score** is the exact epoch millisecond timestamp ($T_{target}$).
+3. Redis internal timer mechanisms notify BullMQ worker listeners the exact millisecond the score matures, moving the job to the active stream without polling loops.
+4. **Strict Idempotency**: Each job is inserted with:
+   ```typescript
+   { jobId: emailRecord.id }
+   ```
+   Redis guarantees that duplicate calls for the same email ID cannot create duplicate entries.
+
+---
+
+### 2. Server Restart Persistence & Recovery
+If the server, worker process, or container crashes:
+1. **Redis Persistence**: Delayed jobs in Redis AOF (Append-Only File) survive restarts.
+2. **PostgreSQL Ground Truth**: Every scheduled job has an authoritative record in PostgreSQL.
+3. **Automatic Startup Reconciliation**: On boot, `reconcilePendingJobs()` scans PostgreSQL for any jobs in `SCHEDULED` state whose scheduled time is within the next 24 hours and ensures they exist in BullMQ.
+4. **Idempotency Guard**: Before dispatching an email, the worker checks:
+   ```typescript
+   const current = await prisma.emailJob.findUnique({ where: { id: emailId } });
+   if (current.status === 'SENT') return; // Prevent duplicate send
+   ```
+
+---
+
+### 3. Sliding-Window Hourly Rate Limiting
+To protect sender reputation and adhere to SMTP provider constraints:
+1. When a job executes, the worker evaluates an atomic counter in Redis:
+   ```
+   rl:sender:<senderEmail>:<hourWindowTimestamp>
+   ```
+2. The key automatically expires after 7,200 seconds (2 hours) using Redis `EXPIRE`.
+3. If `currentCount > hourlyLimit`:
+   - The job is **NEVER dropped or failed**.
+   - The scheduler computes the start of the next hour window ($T_{next\_hour}$).
+   - The job is rescheduled into BullMQ with:
+     $$\text{delay} = T_{next\_hour} - T_{now}$$
+   - The status in PostgreSQL is updated to `RESCHEDULED`.
+
+---
+
+### 4. Real-Time Slack Alerting
+When a sender hits their hourly limit:
+1. The rate limiter flags the overflow condition.
+2. An atomic Redis deduplication lock (`rl:alert_sent:<senderEmail>:<hourWindow>`) is acquired to prevent alert flooding.
+3. If acquired, an alert is dispatched to the user's connected Slack channel:
+   ```
+   ⚠️ Sender Rate Limit Reached
+   Sender: oliver.brown@domain.io
+   Limit: 200 emails/hour
+   Action: Remaining jobs safely rescheduled to next hour.
+   ```
+
+---
+
+### 5. High-Throughput Load Handling (1,000+ Emails)
+When a large batch of 1,000+ emails is submitted:
+1. **Batch Ingestion**: The database insertion utilizes a single Prisma transaction or batched queries, storing all 1,000 records within milliseconds.
+2. **Staggered Timestamps**: Each subsequent recipient receives a timestamp incremented by `DELAY_BETWEEN_EMAILS_MS` (e.g., $250\text{ms}$):
+   $$T_i = T_{start} + (i \times 250\text{ms})$$
+3. **Queue Scalability**: Redis handles $1,000$ sorted set insertions with $O(\log N)$ complexity, consuming under $2\text{ MB}$ of memory.
+4. **Parallel Processing**: 10 BullMQ worker threads consume jobs concurrently while respecting the per-sender rate limits.
+5. **Quota Rollover**: The first 200 emails send in the current hour window; jobs 201 through 1,000 automatically roll over into subsequent hours without manual intervention.
+
+---
+
+### 6. Full-Text Search (Elasticsearch + DB Fallback)
+1. Every scheduled and delivered email is indexed into Elasticsearch under `reachinbox_emails`.
+2. Searches execute multi-match queries across `recipientEmail`, `senderEmail`, `subject`, and `body`.
+3. If Elasticsearch is unreachable, the system automatically falls back to PostgreSQL `ILIKE` queries, ensuring uninterrupted functionality.
+
+---
+
+## 🧪 Automated Constraints Test Suite
+
+To verify that the implementation adheres to all technical constraints, run the built-in test suite:
+
+```bash
 npm run test:constraints
 ```
-All tests run against PostgreSQL and Redis, confirming 100% adherence to all hard constraints.
+
+### Test Suite Output Verification
+```
+===============================================================
+🧪 HARD CONSTRAINTS VERIFICATION TEST SUITE
+===============================================================
+
+TEST 1: ❌ Verifying Zero Cron Jobs (No node-cron, agenda, etc.)...
+   ✅ PASS: No cron libraries found in package dependencies.
+   ✅ PASS: Scheduling is 100% event-driven via BullMQ + Redis.
+
+TEST 2: ✅ Verifying BullMQ Delayed Jobs & Redis Persistence...
+   ✅ PASS: BullMQ delayed job successfully enqueued in Redis sorted set.
+   ✅ PASS: Job delay calculated accurately.
+
+TEST 3: ✅ Verifying Strict Idempotency (jobId = emailId)...
+   ✅ PASS: BullMQ prevented duplicate job insertion with same jobId.
+
+TEST 4: ✅ Verifying Server Restart Persistence & Reconcile...
+   ✅ PASS: Pending database jobs reconciled and enqueued in BullMQ without data loss.
+
+TEST 5: ✅ Verifying Sliding-Window Rate Limiter & Rescheduling...
+   ✅ PASS: Rate limiter correctly identified limit hit.
+   ✅ PASS: Next hour rollover calculated accurately.
+
+===============================================================
+🎉 ALL HARD CONSTRAINTS VERIFIED & PASSED (5/5)
+===============================================================
+```
 
 ---
 
-## 📋 Feature Mapping
+## 🎨 Figma UI Parity & Design Implementation
 
-| Requirement | Implementation Component | File Reference |
-|---|---|---|
-| **Zero-Cron Scheduling** | BullMQ Delayed Queue (`emailQueue.add` with `delay`) | [`backend/src/queues/emailQueue.ts`](backend/src/queues/emailQueue.ts) |
-| **Worker Concurrency** | BullMQ Worker with `concurrency: 10` | [`backend/src/workers/emailWorker.ts`](backend/src/workers/emailWorker.ts) |
-| **Provider Throttling Delay** | Worker sleep delay (`DELAY_BETWEEN_EMAILS_MS: 250ms`) | [`backend/src/workers/emailWorker.ts`](backend/src/workers/emailWorker.ts) |
-| **Hourly Rate Limiting** | Redis atomic sliding window counters | [`backend/src/services/rateLimiter.ts`](backend/src/services/rateLimiter.ts) |
-| **Slack Rate Limit Alert** | Real Slack OAuth token exchange + Web API alert | [`backend/src/services/slackService.ts`](backend/src/services/slackService.ts) |
-| **Elasticsearch Search** | Elastic Client indexing & multi-field query fallback | [`backend/src/services/elasticService.ts`](backend/src/services/elasticService.ts) |
-| **Embedded Queue Monitor** | In-app Bull-Board with instant `✕ Close` & fast 3s live refresh | [`frontend/src/components/QueueMonitorView.tsx`](frontend/src/components/QueueMonitorView.tsx) |
-| **Google Login** | Real `@react-oauth/google` + Demo fallback | [`frontend/src/components/LoginScreen.tsx`](frontend/src/components/LoginScreen.tsx) |
-| **Compose & CSV Lead Parser** | Lead tags (`+N` badge), attachments, "Send Later", "⚡ Send Fast" | [`frontend/src/components/ComposeView.tsx`](frontend/src/components/ComposeView.tsx) |
-| **Scheduled & Sent Inboxes** | Exact Figma-matched row stream with amber time pills | [`frontend/src/components/InboxList.tsx`](frontend/src/components/InboxList.tsx) |
-| **Email Detail View** | Amanda Clark thread, tennis coach attachments, action icons | [`frontend/src/components/EmailDetailView.tsx`](frontend/src/components/EmailDetailView.tsx) |
+The user interface matches the ReachInbox Figma specification:
 
----
-
-## 🔄 Resilience & Restart Persistence Testing
-
-To verify zero-loss restart behavior:
-1. Open the dashboard at `http://localhost:5173`.
-2. Schedule a batch of 5 leads with a start time set to **2 minutes in the future**.
-3. Confirm in the **Scheduled Emails** tab and the **Bull-Board** (`http://localhost:5000/admin/queues`) that the jobs appear under **Delayed**.
-4. Stop the backend process (`Ctrl + C` in the backend PowerShell window).
-5. Wait 30 seconds.
-6. Restart the backend: `npm run dev`.
-7. Notice:
-   - BullMQ re-reads the delayed queue from Redis.
-   - When the scheduled timestamp arrives, the worker picks up the jobs and executes them.
-   - The jobs move to the **Sent Emails** tab with status `Delivered` and active Ethereal preview links.
-   - **Zero jobs were lost, restarted from scratch, or sent twice.**
+1. **Brand Identity**:
+   - Header with bold **`ONB`** logo typography.
+   - User profile card for **Oliver Brown** (`oliver.brown@domain.io`) with avatar and dropdown chevron.
+2. **Primary Controls**:
+   - Distinct rounded pill **`+ Compose`** button with green highlight (`#00A859`).
+   - Counter badges displaying live counts for `Scheduled` and `Sent` categories.
+3. **Schedule Header & Live BullMQ Board**:
+   - Dedicated BullMQ Dashboard Header positioned at the top of the schedule list.
+   - Status badge indicating active queue status (`BullMQ Active (X Jobs)`).
+   - **`⚡ BullMQ Dashboard`** toggle button providing one-click expandable iframe view of the live queue.
+   - **`Fullscreen`** popout button.
+4. **Email Stream List**:
+   - Recipient formatting: Capitalized recipient name (`To: John Smith`).
+   - Timestamp badges: Styled in orange pill (`#FFF6ED`) with clock icon and 12-hour AM/PM format (e.g. `Tue 9:15:12 AM`).
+   - Subject & snippet: Bold primary subject alongside truncated light-gray body text preview.
+   - Live Ethereal preview link: One-click link to view rendered emails in the Ethereal web interface.
+   - Interactive star icon for pinning items.
 
 ---
 
-## 🔔 Rate Limiting & Slack Alerting Logic
+## 🔄 Step-by-Step Resilience Testing Guide
 
-1. When jobs are processed, `checkAndIncrementRateLimit` checks `rl:sender:<senderEmail>:<hourBucket>`.
-2. If `currentCount > hourlyLimit`:
-   - An alert payload is sent to the user's connected Slack channel.
-   - The job is re-added to BullMQ with a delay equal to `nextHourStart - now`.
-   - The database status updates to `RESCHEDULED`.
-3. To test this instantly in the UI:
-   - Click **Connect Slack** in the top navigation.
-   - Click the **Test Alert** button in the header, or set `hourlyLimit` to `1` in the Compose modal to see the automated live trigger in action.
+### Verify Zero-Loss Server Restarts
+
+1. **Open Dashboard**: Go to `http://localhost:3000`.
+2. **Schedule an Email**:
+   - Click **Compose**.
+   - Enter a test recipient (e.g. `test.lead@domain.com`).
+   - Select **Send Later** and pick a time **2 minutes in the future**.
+   - Click **Schedule Email**.
+3. **Verify Delayed Queue**:
+   - Notice the item in the **Scheduled** tab with its amber badge.
+   - Click **`⚡ BullMQ Dashboard`** in the header to expand the embedded queue monitor.
+   - Confirm that the job is visible under the **Delayed** tab in Bull-Board.
+4. **Simulate Server Crash**:
+   - In your backend terminal, press `Ctrl + C` to stop the backend process.
+   - Wait 30 seconds.
+5. **Restart Server**:
+   - Start the backend again: `npm run dev:backend`.
+6. **Observe Delivery**:
+   - When the scheduled timestamp arrives, the worker picks up the job from Redis.
+   - The email is delivered via Ethereal fake SMTP.
+   - The job transitions to the **Sent** tab with an active **Preview** link.
+   - **Result**: Zero emails lost, zero duplicate sends, and no timer resets.
 
 ---
 
 ## 🎥 5-Minute Demo Video Walkthrough Script
 
-Follow this script for your submission recording:
+Use this structured script when recording your submission video:
 
-| Minute | Segment | What to Show |
-|---|---|---|
-| **0:00 - 0:45** | **Architecture & Login** | • Log in using Google OAuth (or Demo button).<br>• Show the clean UI header with User info, Bull-Board link, and Slack button.<br>• Briefly explain the producer-consumer BullMQ architecture. |
-| **0:45 - 1:45** | **Composing & CSV Lead Parsing** | • Open "Compose New Email".<br>• Drag and drop `sample-leads.csv`. Show the detected leads badge update.<br>• Set Delay between sends to 2s, Hourly Limit to 10.<br>• Schedule the campaign. |
-| **1:45 - 2:45** | **Bull-Board & Ethereal Delivery** | • Switch to Bull-Board (`localhost:5000/admin/queues`) and show the delayed jobs countdown.<br>• Watch jobs transition from `SCHEDULED` to `SENT`.<br>• Click "View in Ethereal" on a delivered email to show the rendered email in Ethereal web interface. |
-| **2:45 - 3:45** | **Server Restart Persistence Test** | • Schedule an email for 1 minute in the future.<br>• Kill the backend terminal (`Ctrl + C`).<br>• Show that Redis & DB keep state intact.<br>• Relaunch the backend and watch the email deliver right on schedule without duplicates. |
-| **3:45 - 5:00** | **Rate Limiting, Load & Slack Alert** | • Schedule a batch with hourly limit set to 2.<br>• Show the 3rd job getting marked `Rate-Limit Rescheduled`.<br>• Show the live Slack notification triggered in your Slack channel.<br>• Demonstrate the Elasticsearch search bar finding emails instantly. |
+| Timestamp | Topic | What to Demonstrate on Screen |
+| :--- | :--- | :--- |
+| **0:00 – 0:45** | **Architecture & Single URL** | • Navigate to `http://localhost:3000`.<br>• Point out the single URL architecture (no port switching).<br>• Show the user card, top search bar, and Slack status pill.<br>• Briefly explain BullMQ delayed queue architecture (zero cron jobs). |
+| **0:45 – 1:45** | **Composing & CSV Leads** | • Click **Compose**.<br>• Drag and drop or paste a CSV of lead emails. Show the recipient count badge.<br>• Set Delay between sends to `250ms`, Hourly Limit to `10`.<br>• Click "Send Later" and schedule for 1 minute in the future. |
+| **1:45 – 2:45** | **Inline BullMQ Board & Delivery** | • Click **`⚡ BullMQ Dashboard`** right above the schedule list.<br>• Show the live job sitting in BullMQ's **Delayed** queue.<br>• Watch the timer reach 0: the job moves to **Active**, then **Completed**.<br>• Show the job appearing in the **Sent** tab and click the **Preview** link to display the email in Ethereal. |
+| **2:45 – 3:45** | **Crash & Restart Persistence** | • Schedule another email for 2 minutes in the future.<br>• Stop the backend terminal (`Ctrl + C`) to simulate an unexpected crash.<br>• Explain how Redis AOF and PostgreSQL maintain state.<br>• Restart the backend and show the job delivering right on time without duplicates. |
+| **3:45 – 5:00** | **Rate Limiting, Search & Slack Alert** | • Schedule a batch with hourly limit set to 1.<br>• Show the second email being marked `RESCHEDULED` to the next hour window.<br>• Show the live Slack notification card in your connected Slack channel.<br>• Type a keyword in the top search bar to show instant Elasticsearch / DB results. |
+
+---
+
+## 📄 License & Attribution
+
+Developed for the **ReachInbox Technical Assessment**. Built with modern TypeScript, Next.js 14, Express, BullMQ, Redis, PostgreSQL, and Tailwind CSS.
